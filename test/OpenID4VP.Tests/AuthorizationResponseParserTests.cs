@@ -1,0 +1,225 @@
+using System.Text.Json;
+using OpenID4VP.Models;
+using OpenID4VP.Parsers;
+
+namespace OpenID4VP.Tests.Parsers;
+
+/// <summary>
+/// Tests for AuthorizationResponseParser
+/// </summary>
+public class AuthorizationResponseParserTests
+{
+    private readonly AuthorizationResponseParser _parser = new();
+
+    [Fact]
+    public void Parse_ValidResponseWithVpTokenOnly_ReturnsAuthorizationResponse()
+    {
+        var json = @"{ 
+            ""vp_token"": ""eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9...""
+        }";
+        
+        var response = _parser.Parse(json);
+        
+        Assert.NotNull(response);
+        Assert.NotNull(response.VpToken);
+        Assert.Null(response.State);
+        Assert.Null(response.IdToken);
+    }
+
+    [Fact]
+    public void Parse_ResponseWithVpTokenAndState_ReturnsAuthorizationResponse()
+    {
+        var json = @"{ 
+            ""vp_token"": ""eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9..."",
+            ""state"": ""state-abc-123""
+        }";
+        
+        var response = _parser.Parse(json);
+        
+        Assert.NotNull(response);
+        Assert.NotNull(response.VpToken);
+        Assert.Equal("state-abc-123", response.State);
+        Assert.Null(response.IdToken);
+    }
+
+    [Fact]
+    public void Parse_ResponseWithVpTokenStateAndIdToken_ReturnsAuthorizationResponse()
+    {
+        var json = @"{ 
+            ""vp_token"": ""eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9..."",
+            ""state"": ""state-123"",
+            ""id_token"": ""eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9...id""
+        }";
+        
+        var response = _parser.Parse(json);
+        
+        Assert.NotNull(response);
+        Assert.NotNull(response.VpToken);
+        Assert.Equal("state-123", response.State);
+        Assert.Equal("eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9...id", response.IdToken);
+    }
+
+    [Fact]
+    public void Parse_ResponseWithArrayVpToken_ReturnsAuthorizationResponse()
+    {
+        var json = @"{ 
+            ""vp_token"": [
+                ""jwt1..."",
+                ""jwt2...""
+            ]
+        }";
+        
+        var response = _parser.Parse(json);
+        
+        Assert.NotNull(response);
+        Assert.NotNull(response.VpToken);
+    }
+
+    [Fact]
+    public void Parse_MissingVpToken_ThrowsInvalidOperationException()
+    {
+        var json = @"{ ""state"": ""state-123"" }";
+        
+        var ex = Assert.Throws<InvalidOperationException>(() => _parser.Parse(json));
+        Assert.Contains("vp_token", ex.Message);
+    }
+
+    [Fact]
+    public void Parse_NullJson_ThrowsArgumentException()
+    {
+        var ex = Assert.Throws<ArgumentException>(() => _parser.Parse((string)null!));
+        Assert.Equal("json", ex.ParamName);
+    }
+
+    [Fact]
+    public void Parse_EmptyJsonString_ThrowsArgumentException()
+    {
+        var ex = Assert.Throws<ArgumentException>(() => _parser.Parse(""));
+        Assert.Equal("json", ex.ParamName);
+    }
+
+    [Fact]
+    public void Parse_InvalidJson_Throws()
+    {
+        var invalidJson = @"{ invalid json }";
+        
+        var ex = Record.Exception(() => _parser.Parse(invalidJson));
+        Assert.NotNull(ex);
+    }
+
+    [Fact]
+    public void Parse_NotAnObject_ThrowsInvalidOperationException()
+    {
+        var json = @"[""array""]";
+        
+        var ex = Assert.Throws<InvalidOperationException>(() => _parser.Parse(json));
+        Assert.Contains("object", ex.Message);
+    }
+
+
+
+    [Fact]
+    public void Parse_CaseSensitiveProperties_ThrowsInvalidOperationException()
+    {
+        var json = @"{ 
+            ""VP_Token"": ""jwt..."",
+            ""STATE"": ""state-123""
+        }";
+        
+        // JSON is case-sensitive, VP_Token is not vp_token
+        var ex = Assert.Throws<InvalidOperationException>(() => _parser.Parse(json));
+        Assert.Contains("vp_token", ex.Message);
+    }
+
+    [Fact]
+    public void ParseFormParameters_ValidParameters_ReturnsAuthorizationResponse()
+    {
+        var parameters = new Dictionary<string, string>
+        {
+            { "vp_token", "jwt_presentation" },
+            { "state", "state-abc" }
+        };
+        
+        var response = _parser.ParseFormParameters(parameters);
+        
+        Assert.NotNull(response);
+        Assert.Equal("jwt_presentation", (string?)response.VpToken.Presentations);
+        Assert.Equal("state-abc", response.State);
+    }
+
+    [Fact]
+    public void ParseFormParameters_OnlyVpToken_ReturnsAuthorizationResponse()
+    {
+        var parameters = new Dictionary<string, string>
+        {
+            { "vp_token", "jwt_presentation" }
+        };
+        
+        var response = _parser.ParseFormParameters(parameters);
+        
+        Assert.NotNull(response);
+        Assert.Equal("jwt_presentation", (string?)response.VpToken.Presentations);
+        Assert.Null(response.State);
+    }
+
+    [Fact]
+    public void ParseFormParameters_WithIdToken_ReturnsAuthorizationResponse()
+    {
+        var parameters = new Dictionary<string, string>
+        {
+            { "vp_token", "vp..." },
+            { "state", "state-x" },
+            { "id_token", "idt..." }
+        };
+        
+        var response = _parser.ParseFormParameters(parameters);
+        
+        Assert.NotNull(response);
+        Assert.Equal("vp...", (string?)response.VpToken.Presentations);
+        Assert.Equal("state-x", response.State);
+        Assert.Equal("idt...", response.IdToken);
+    }
+
+    [Fact]
+    public void ParseFormParameters_MissingVpToken_ThrowsInvalidOperationException()
+    {
+        var parameters = new Dictionary<string, string>
+        {
+            { "state", "state-123" }
+        };
+        
+        var ex = Assert.Throws<InvalidOperationException>(() => _parser.ParseFormParameters(parameters));
+        Assert.Contains("vp_token", ex.Message);
+    }
+
+    [Fact]
+    public void ParseFormParameters_NullParameters_ThrowsArgumentNullException()
+    {
+        var ex = Assert.Throws<ArgumentNullException>(() => _parser.ParseFormParameters(null!));
+        Assert.Equal("parameters", ex.ParamName);
+    }
+
+    [Fact]
+    public void Parse_ComplexResponse_ReturnsAuthorizationResponse()
+    {
+        var json = @"{ 
+            ""vp_token"": {
+                ""format"": ""jwt_vp_json"",
+                ""presentation"": ""eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9..."",
+                ""metadata"": {
+                    ""issuer"": ""https://wallet.example.com""
+                }
+            },
+            ""state"": ""complex-state-123"",
+            ""id_token"": ""eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9...id"",
+            ""extra_param"": ""ignored""
+        }";
+        
+        var response = _parser.Parse(json);
+        
+        Assert.NotNull(response);
+        Assert.NotNull(response.VpToken);
+        Assert.Equal("complex-state-123", response.State);
+        Assert.Equal("eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9...id", response.IdToken);
+    }
+}

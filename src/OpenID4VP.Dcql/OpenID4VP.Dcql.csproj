@@ -3,8 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-	<RootNamespace>OpenID4VP.Dcql</RootNamespace>
+    <Nullable>enable</Nullable>	
     
     <PackageId>OpenID4VP.Dcql</PackageId>
     <Version>1.0.0</Version>
