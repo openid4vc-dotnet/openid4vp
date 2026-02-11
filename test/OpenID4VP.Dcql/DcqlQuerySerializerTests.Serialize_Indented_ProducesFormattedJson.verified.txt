@@ -1,0 +1,13 @@
+﻿{
+  "credentials": [
+    {
+      "format": "mso_mdoc",
+      "require_cryptographic_holder_binding": true,
+      "multiple": false,
+      "id": "mdl",
+      "meta": {
+        "doctype_value": "org.iso.18013.5.1.mDL"
+      }
+    }
+  ]
+}

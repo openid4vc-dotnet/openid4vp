@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path="LICENSE" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="test/OpenID4VP.Dcql/OpenID4VP.Dcql.Tests.csproj" />
+  </Folder>
+  <Project Path="src/OpenID4VP.Dcql/OpenID4VP.Dcql.csproj" />
+</Solution>

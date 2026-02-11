@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+	<RootNamespace>OpenID4VP.Dcql</RootNamespace>
+    
+    <PackageId>OpenID4VP.Dcql</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Geert Doornbos</Authors>
+    <Description>Digital Credentials Query Language (DCQL) implementation for .NET - A JSON-encoded query language for requesting Verifiable Presentations as defined in OpenID for Verifiable Presentations 1.0</Description>
+    <PackageTags>DCQL;OpenID4VC; OpenID4VP;Verifiable Credentials;Verifiable Presentations;SSI;OpenID;W3C VC;SD-JWT;mdoc</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/digital-identity/dcql</RepositoryUrl>
+    
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" Version="12.1.1" />
+  </ItemGroup>
+
+</Project>

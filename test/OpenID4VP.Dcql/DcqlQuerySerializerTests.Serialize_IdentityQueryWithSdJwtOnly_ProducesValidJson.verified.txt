@@ -1,0 +1,91 @@
+﻿{
+  "credentials": [
+    {
+      "format": "dc\u002Bsd-jwt",
+      "require_cryptographic_holder_binding": true,
+      "multiple": false,
+      "id": "idcard",
+      "claims": [
+        {
+          "path": [
+            "firstName"
+          ],
+          "id": "fn"
+        },
+        {
+          "path": [
+            "lastName"
+          ],
+          "id": "ln"
+        }
+      ],
+      "meta": {
+        "vct_values": [
+          "pbdf-staging.pbdf.idcard"
+        ]
+      }
+    },
+    {
+      "format": "dc\u002Bsd-jwt",
+      "require_cryptographic_holder_binding": true,
+      "multiple": false,
+      "id": "passport",
+      "claims": [
+        {
+          "path": [
+            "firstName"
+          ],
+          "id": "fn"
+        },
+        {
+          "path": [
+            "lastName"
+          ],
+          "id": "ln"
+        }
+      ],
+      "meta": {
+        "vct_values": [
+          "pbdf-staging.pbdf.passport"
+        ]
+      }
+    },
+    {
+      "format": "dc\u002Bsd-jwt",
+      "require_cryptographic_holder_binding": true,
+      "multiple": false,
+      "id": "drivers_license",
+      "claims": [
+        {
+          "path": [
+            "firstName"
+          ],
+          "id": "fn"
+        },
+        {
+          "path": [
+            "lastName"
+          ],
+          "id": "ln"
+        }
+      ],
+      "meta": {
+        "vct_values": [
+          "pbdf-staging.pbdf.drivinglicence"
+        ]
+      }
+    }
+  ],
+  "credential_sets": [
+    {
+      "options": [
+        [
+          "idcard",
+          "passport",
+          "drivers_license"
+        ]
+      ],
+      "required": true
+    }
+  ]
+}
