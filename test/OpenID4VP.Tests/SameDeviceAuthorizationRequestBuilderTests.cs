@@ -1,6 +1,7 @@
 using OpenID4VP.Builders;
 using OpenID4VP.Common;
 using OpenID4VP.Dcql.Query.Builders;
+using OpenID4VP.Validators;
 
 namespace OpenID4VP.Tests.Builders;
 
@@ -71,8 +72,15 @@ public class SameDeviceAuthorizationRequestBuilderTests
             .WithRedirectUri("https://verifier.example.com/callback")
             .WithDcql(dcql => dcql.AddW3cVcCredential("cred-1", b => ConfigureValidW3cCredential(b)));
 
-        var ex = Assert.Throws<InvalidOperationException>(() => builder.Build());
-        Assert.Contains("response_type is REQUIRED for same-device mode", ex.Message);
+        // Build() succeeds (permissive) - uses default response_type
+        var request = builder.Build();
+        Assert.NotNull(request);
+
+        // But the validator should fail for same-device mode
+        var validator = new SameDeviceAuthorizationRequestValidator();
+        var result = validator.Validate(request);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.Contains("response_type is REQUIRED for same-device mode"));
     }
 
     [Theory]
@@ -87,8 +95,15 @@ public class SameDeviceAuthorizationRequestBuilderTests
             .WithRedirectUri("https://verifier.example.com/callback")
             .WithDcql(dcql => dcql.AddW3cVcCredential("cred-1", b => ConfigureValidW3cCredential(b)));
 
-        var ex = Assert.Throws<InvalidOperationException>(() => builder.Build());
-        Assert.Contains("nonce is REQUIRED for same-device mode", ex.Message);
+        // Build() succeeds (permissive) - uses default nonce
+        var request = builder.Build();
+        Assert.NotNull(request);
+
+        // But the validator should fail for same-device mode
+        var validator = new SameDeviceAuthorizationRequestValidator();
+        var result = validator.Validate(request);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.Contains("nonce is REQUIRED for same-device mode"));
     }
 
     [Theory]
@@ -104,28 +119,43 @@ public class SameDeviceAuthorizationRequestBuilderTests
             // Note: NOT setting redirect_uri
             .WithDcql(dcql => dcql.AddW3cVcCredential("cred-1", b => ConfigureValidW3cCredential(b)));
 
-        var ex = Assert.Throws<InvalidOperationException>(() => builder.Build());
-        Assert.Contains("redirect_uri is REQUIRED for same-device mode", ex.Message);
+        // Build() succeeds (permissive)
+        var request = builder.Build();
+        Assert.NotNull(request);
+
+        // But the validator should fail for same-device mode
+        var validator = new SameDeviceAuthorizationRequestValidator();
+        var result = validator.Validate(request);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.Contains("redirect_uri is REQUIRED for same-device mode"));
     }
 
     [Theory]
     [InlineData(ResponseModes.Fragment)]
     [InlineData(ResponseModes.Query)]
-    public void Build_SameDevice_WithRequestUri_Throws(string responseMode)
+    public void Build_SameDevice_WithRequestUri_Succeeds_ButValidatorFails(string responseMode)
     {
-        // request_uri is FORBIDDEN in same-device (only in cross-device)
-        var builder = AuthorizationRequestBuilder.Create()
+        // request_uri is FORBIDDEN in same-device mode (only in cross-device)
+        // Build() is permissive and allows it, but the validator should catch it
+        var request = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
             .WithClientId("verifier-1")
             .WithNonce("nonce-123")
             .WithResponseMode(responseMode)
             .WithRedirectUri("https://verifier.example.com/callback")
-            .WithRequestUri("https://verifier.example.com/request")  // FORBIDDEN!
-            .WithDcql(dcql => dcql.AddW3cVcCredential("cred-1", b => ConfigureValidW3cCredential(b)));
+            .WithRequestUri("https://verifier.example.com/request")  // FORBIDDEN for same-device!
+            .WithDcql(dcql => dcql.AddW3cVcCredential("cred-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
 
-        var ex = Assert.Throws<InvalidOperationException>(() => builder.Build());
-        Assert.Contains("request_uri MUST NOT be set in same-device mode", ex.Message);
-        Assert.Contains("cross-device mode", ex.Message);  // Helpful guidance
+        // Build() succeeds (permissive)
+        Assert.NotNull(request);
+        Assert.Equal("https://verifier.example.com/request", request.RequestUri);
+
+        // But the validator should fail for same-device mode
+        var validator = new SameDeviceAuthorizationRequestValidator();
+        var result = validator.Validate(request);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.StartsWith("request_uri MUST NOT be set in same-device mode"));
     }
 
     [Theory]

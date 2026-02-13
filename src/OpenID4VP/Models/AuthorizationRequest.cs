@@ -100,6 +100,15 @@ public sealed record AuthorizationRequest
     public string? RequestUriMethod { get; init; }
 
     /// <summary>
+    /// OPTIONAL. A URL from which the Wallet can retrieve the Request Object (cross-device mode).
+    /// REQUIRED when using cross-device mode with response_mode "direct_post" or "direct_post.jwt".
+    /// MUST NOT be set when using same-device mode (fragment or query response).
+    /// Specification: Section 3.2 (Cross Device Mode)
+    /// </summary>
+    [JsonPropertyName("request_uri")]
+    public string? RequestUri { get; init; }
+
+    /// <summary>
     /// OPTIONAL. A JSON object containing the Verifier metadata values.
     /// Specification: Section 5.1
     /// </summary>

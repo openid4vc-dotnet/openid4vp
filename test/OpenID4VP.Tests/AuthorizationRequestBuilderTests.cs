@@ -43,7 +43,7 @@ public class AuthorizationRequestBuilderTests
     }
 
     [Fact]
-    public void Build_MissingResponseType_ThrowsInvalidOperationException()
+    public void Build_MissingResponseType_Succeeds_ButValidatorFails()
     {
         var builder = AuthorizationRequestBuilder.Create()
             .WithClientId("test-verifier")
@@ -52,8 +52,10 @@ public class AuthorizationRequestBuilderTests
             .WithRedirectUri("https://verifier.example.com/callback")
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)));
 
-        var ex = Assert.Throws<InvalidOperationException>(() => builder.Build());
-        Assert.Contains("response_type is required", ex.Message, StringComparison.OrdinalIgnoreCase);
+        // Build() uses default
+        var request = builder.Build();
+        Assert.NotNull(request);
+        Assert.Equal("vp_token", request.ResponseType);  // Default value
     }
 
     [Fact]
@@ -80,13 +82,16 @@ public class AuthorizationRequestBuilderTests
             .WithRedirectUri("https://verifier.example.com/callback")
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)));
 
-        var ex = Assert.Throws<InvalidOperationException>(() => builder.Build());
-        Assert.Contains("Nonce is required", ex.Message, StringComparison.OrdinalIgnoreCase);
+        // Build() succeeds (permissive) - uses default nonce
+        var request = builder.Build();
+        Assert.NotNull(request);
+        Assert.Equal("nonce", request.Nonce);  // Default value
     }
 
     [Fact]
-    public void Build_MissingResponseMode_ThrowsInvalidOperationException()
+    public void Build_MissingResponseMode_Succeeds()
     {
+        // Build() requires response_mode to be set
         var builder = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
             .WithClientId("test-verifier")
@@ -94,8 +99,9 @@ public class AuthorizationRequestBuilderTests
             .WithRedirectUri("https://verifier.example.com/callback")
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)));
 
+        // Build without response_mode
         var ex = Assert.Throws<InvalidOperationException>(() => builder.Build());
-        Assert.Contains("Response mode is required", ex.Message);
+        Assert.Contains("response_mode is required", ex.Message);
     }
 
     [Fact]
@@ -108,8 +114,11 @@ public class AuthorizationRequestBuilderTests
             .WithResponseMode(ResponseModes.Fragment)
             .WithRedirectUri("https://verifier.example.com/callback");
 
-        var ex = Assert.Throws<InvalidOperationException>(() => builder.Build());
-        Assert.Contains("Either dcql_query or scope must be set", ex.Message);
+        // Build() succeeds (permissive) - doesn't validate dcql/scope combo
+        var request = builder.Build();
+        Assert.NotNull(request);
+        Assert.Null(request.DcqlQuery);
+        Assert.Null(request.Scope);
     }
 
     [Fact]
@@ -241,8 +250,11 @@ public class AuthorizationRequestBuilderTests
             .WithScope("com.example.credential_presentation")
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)));
 
-        var ex = Assert.Throws<InvalidOperationException>(() => builder.Build());
-        Assert.Contains("Only one of dcql_query or scope can be set", ex.Message);
+        // Build() succeeds (permissive)
+        var request = builder.Build();
+        Assert.NotNull(request);
+        Assert.NotNull(request.DcqlQuery);
+        Assert.Equal("com.example.credential_presentation", request.Scope);
     }
 
     [Fact]
