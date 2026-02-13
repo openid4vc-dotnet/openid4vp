@@ -12,8 +12,9 @@ namespace OpenID4VP.Builders;
 /// This builder enforces the SOLID principle of encapsulation: AuthorizationRequest objects
 /// cannot be instantiated directly - they can only be created through this builder.
 /// 
-/// The builder implements a fluent API for configuration and ensures all required fields are set
-/// before Build() is called.
+/// The builder implements a fluent API for configuration and accumulates validation errors
+/// which are all returned together when Build() is called, enabling users to see all
+/// validation issues at once rather than failing on the first error.
 ///
 /// Specification: OpenID for Verifiable Presentations 1.0, Section 5
 /// </summary>
@@ -33,6 +34,8 @@ public sealed class AuthorizationRequestBuilder
     private VerifierMetadata? _clientMetadata;
     private List<VerifierAttestation>? _verifierInfo;
     private List<string>? _transactionData;
+    private readonly List<Error> _errors = [];
+    private bool _dcqlAlreadySet = false;
 
     /// <summary>
     /// Creates a new AuthorizationRequestBuilder instance.
@@ -43,10 +46,10 @@ public sealed class AuthorizationRequestBuilder
     /// Sets the response type. REQUIRED.
     /// Valid values: "vp_token" or "vp_token id_token"
     /// </summary>
-    public AuthorizationRequestBuilder WithResponseType(string responseType)
+    public AuthorizationRequestBuilder WithResponseType(string? responseType)
     {
         if (string.IsNullOrWhiteSpace(responseType))
-            throw new ArgumentException("Response type cannot be null or empty", nameof(responseType));
+            _errors.Add(BuilderErrors.ResponseTypeIsRequired());
 
         _responseType = responseType;
         return this;
@@ -55,10 +58,10 @@ public sealed class AuthorizationRequestBuilder
     /// <summary>
     /// Sets the Client Identifier of the Verifier. REQUIRED.
     /// </summary>
-    public AuthorizationRequestBuilder WithClientId(string clientId)
+    public AuthorizationRequestBuilder WithClientId(string? clientId)
     {
         if (string.IsNullOrWhiteSpace(clientId))
-            throw new ArgumentException("Client ID cannot be null or empty", nameof(clientId));
+            _errors.Add(BuilderErrors.ClientIdIsRequired());
 
         _clientId = clientId;
         return this;
@@ -68,10 +71,10 @@ public sealed class AuthorizationRequestBuilder
     /// Sets the nonce value. REQUIRED.
     /// Must contain only ASCII URL-safe characters (uppercase/lowercase letters, decimal digits, hyphen, period, underscore, tilde).
     /// </summary>
-    public AuthorizationRequestBuilder WithNonce(string nonce)
+    public AuthorizationRequestBuilder WithNonce(string? nonce)
     {
         if (string.IsNullOrWhiteSpace(nonce))
-            throw new ArgumentException("Nonce cannot be null or empty", nameof(nonce));
+            _errors.Add(BuilderErrors.NonceIsRequired());
 
         _nonce = nonce;
         return this;
@@ -81,10 +84,10 @@ public sealed class AuthorizationRequestBuilder
     /// Sets the response mode. REQUIRED.
     /// Valid values: "fragment", "query", "direct_post", "direct_post.jwt"
     /// </summary>
-    public AuthorizationRequestBuilder WithResponseMode(string responseMode)
+    public AuthorizationRequestBuilder WithResponseMode(string? responseMode)
     {
         if (string.IsNullOrWhiteSpace(responseMode))
-            throw new ArgumentException("Response mode cannot be null or empty", nameof(responseMode));
+            _errors.Add(BuilderErrors.ResponseModeIsRequired());
 
         _responseMode = responseMode;
         return this;
@@ -94,16 +97,20 @@ public sealed class AuthorizationRequestBuilder
     /// Sets the DCQL query. REQUIRED. Callable only once.
     /// The builder creates a DcqlQueryBuilder internally and passes it to the configure action.
     /// </summary>
-    public AuthorizationRequestBuilder WithDcql(Action<DcqlQueryBuilder> configure)
+    public AuthorizationRequestBuilder WithDcql(Action<DcqlQueryBuilder>? configure)
     {
-        if (_dcqlBuilder != null)
-            throw new InvalidOperationException("DCQL query can only be set once");
+        if (_dcqlAlreadySet)
+            _errors.Add(BuilderErrors.DcqlCanOnlyBeSetOnce());
 
         if (configure == null)
-            throw new ArgumentNullException(nameof(configure));
+        {
+            _errors.Add(BuilderErrors.DcqlConfigureCannotBeNull());
+            return this;
+        }
 
         _dcqlBuilder = DcqlQueryBuilder.Create();
         configure(_dcqlBuilder);
+        _dcqlAlreadySet = true;
         return this;
     }
 
@@ -131,7 +138,7 @@ public sealed class AuthorizationRequestBuilder
     /// Sets the request URI where the wallet fetches the full Request Object.
     /// REQUIRED for cross-device mode. Points to endpoint with full authorization parameters.
     /// </summary>
-    public AuthorizationRequestBuilder WithRequestUri(string requestUri)
+    public AuthorizationRequestBuilder WithRequestUri(string? requestUri)
     {
         _requestUri = requestUri;
         return this;
@@ -181,26 +188,34 @@ public sealed class AuthorizationRequestBuilder
     /// <summary>
     /// Adds a Verifier attestation to the verifier_info array.
     /// </summary>
-    public AuthorizationRequestBuilder AddVerifierAttestation(VerifierAttestation attestation)
+    public AuthorizationRequestBuilder AddVerifierAttestation(VerifierAttestation? attestation)
     {
         if (attestation == null)
-            throw new ArgumentNullException(nameof(attestation));
+            _errors.Add(BuilderErrors.VerifierAttestationCannotBeNull());
 
-        _verifierInfo ??= [];
-        _verifierInfo.Add(attestation);
+        if (attestation != null)
+        {
+            _verifierInfo ??= [];
+            _verifierInfo.Add(attestation);
+        }
+
         return this;
     }
 
     /// <summary>
     /// Adds transaction data (base64url-encoded JSON string).
     /// </summary>
-    public AuthorizationRequestBuilder AddTransactionData(string transactionData)
+    public AuthorizationRequestBuilder AddTransactionData(string? transactionData)
     {
         if (string.IsNullOrWhiteSpace(transactionData))
-            throw new ArgumentException("Transaction data cannot be null or empty", nameof(transactionData));
+            _errors.Add(BuilderErrors.TransactionDataCannotBeNull());
 
-        _transactionData ??= [];
-        _transactionData.Add(transactionData);
+        if (!string.IsNullOrWhiteSpace(transactionData))
+        {
+            _transactionData ??= [];
+            _transactionData.Add(transactionData);
+        }
+
         return this;
     }
 
@@ -216,6 +231,10 @@ public sealed class AuthorizationRequestBuilder
     /// </summary>
     public Result<AuthorizationRequest> Build()
     {
+        // Return all accumulated errors if any exist
+        if (_errors.Any())
+            return _errors.ToArray();
+
         // Minimal validation: only enforce absolutely required fields
         if (string.IsNullOrEmpty(_clientId))
             return BuilderErrors.ClientIdIsRequired();

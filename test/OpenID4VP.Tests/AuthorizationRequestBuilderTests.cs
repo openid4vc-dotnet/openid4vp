@@ -135,74 +135,105 @@ public class AuthorizationRequestBuilderTests
     }
 
     [Fact]
-    public void WithDcql_CalledTwice_ThrowsInvalidOperationException()
+    public void WithDcql_CalledTwice_ReturnsError()
     {
-        var builder = AuthorizationRequestBuilder.Create()
+        var result = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
             .WithClientId("test-verifier")
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(ResponseModes.Fragment)
             .WithRedirectUri("https://verifier.example.com/callback")
-            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)));
-
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            builder.WithDcql(dcql => dcql.AddMdocCredential("mdoc-1", b => { })));
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .WithDcql(dcql => dcql.AddMdocCredential("mdoc-1", b => { }))
+            .Build();
         
-        Assert.Contains("DCQL query can only be set once", ex.Message);
+        Assert.False(result.IsSuccess);
+        Assert.Single(result.Errors);
+        Assert.Contains("DCQL query can only be configured once", result.Errors[0].Message);
     }
 
     [Fact]
-    public void WithResponseType_NullOrEmpty_ThrowsArgumentException()
+    public void WithResponseType_NullOrEmpty_ReturnsError()
     {
-        var builder = AuthorizationRequestBuilder.Create();
+        var result = AuthorizationRequestBuilder.Create()
+            .WithResponseType("")
+            .WithClientId("test-verifier")
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.Fragment)
+            .Build();
         
-        var ex = Assert.Throws<ArgumentException>(() => builder.WithResponseType(""));
-        Assert.Contains("Response type cannot be null or empty", ex.Message);
+        Assert.False(result.IsSuccess);
+        Assert.Single(result.Errors);
+        Assert.Contains("response_type is required", result.Errors[0].Message);
     }
 
     [Fact]
-    public void WithClientId_NullOrEmpty_ThrowsArgumentException()
+    public void WithClientId_NullOrEmpty_ReturnsError()
     {
-        var builder = AuthorizationRequestBuilder.Create();
+        var result = AuthorizationRequestBuilder.Create()
+            .WithClientId("")
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.Fragment)
+            .Build();
         
-        var ex = Assert.Throws<ArgumentException>(() => builder.WithClientId(""));
-        Assert.Contains("Client ID cannot be null or empty", ex.Message);
+        Assert.False(result.IsSuccess);
+        Assert.Single(result.Errors);
+        Assert.Contains("client_id is required", result.Errors[0].Message);
     }
 
     [Fact]
-    public void WithNonce_NullOrEmpty_ThrowsArgumentException()
+    public void WithNonce_NullOrEmpty_ReturnsError()
     {
-        var builder = AuthorizationRequestBuilder.Create();
+        var result = AuthorizationRequestBuilder.Create()
+            .WithClientId("test-verifier")
+            .WithNonce("")
+            .WithResponseMode(ResponseModes.Fragment)
+            .Build();
         
-        var ex = Assert.Throws<ArgumentException>(() => builder.WithNonce(""));
-        Assert.Contains("Nonce cannot be null or empty", ex.Message);
+        Assert.False(result.IsSuccess);
+        Assert.Single(result.Errors);
+        Assert.Contains("nonce is required", result.Errors[0].Message);
     }
 
     [Fact]
-    public void WithResponseMode_NullOrEmpty_ThrowsArgumentException()
+    public void WithResponseMode_NullOrEmpty_ReturnsError()
     {
-        var builder = AuthorizationRequestBuilder.Create();
+        var result = AuthorizationRequestBuilder.Create()
+            .WithClientId("test-verifier")
+            .WithResponseMode("")
+            .Build();
         
-        var ex = Assert.Throws<ArgumentException>(() => builder.WithResponseMode(""));
-        Assert.Contains("Response mode cannot be null or empty", ex.Message);
+        Assert.False(result.IsSuccess);
+        Assert.Single(result.Errors);
+        Assert.Contains("response_mode is required", result.Errors[0].Message);
     }
 
     [Fact]
-    public void WithDcql_NullAction_ThrowsArgumentNullException()
+    public void WithDcql_NullAction_ReturnsError()
     {
-        var builder = AuthorizationRequestBuilder.Create();
+        var result = AuthorizationRequestBuilder.Create()
+            .WithClientId("test-verifier")
+            .WithResponseMode(ResponseModes.Fragment)
+            .WithDcql(null!)
+            .Build();
         
-        var ex = Assert.Throws<ArgumentNullException>(() => builder.WithDcql(null!));
-        Assert.Equal("configure", ex.ParamName);
+        Assert.False(result.IsSuccess);
+        Assert.Single(result.Errors);
+        Assert.Contains("DCQL configure action cannot be null", result.Errors[0].Message);
     }
 
     [Fact]
-    public void AddVerifierAttestation_NullAttestation_ThrowsArgumentNullException()
+    public void AddVerifierAttestation_NullAttestation_ReturnsError()
     {
-        var builder = AuthorizationRequestBuilder.Create();
+        var result = AuthorizationRequestBuilder.Create()
+            .WithClientId("test-verifier")
+            .WithResponseMode(ResponseModes.Fragment)
+            .AddVerifierAttestation(null!)
+            .Build();
         
-        var ex = Assert.Throws<ArgumentNullException>(() => builder.AddVerifierAttestation(null!));
-        Assert.Equal("attestation", ex.ParamName);
+        Assert.False(result.IsSuccess);
+        Assert.Single(result.Errors);
+        Assert.Contains("Verifier attestation cannot be null", result.Errors[0].Message);
     }
 
     [Fact]
@@ -291,5 +322,27 @@ public class AuthorizationRequestBuilderTests
         Assert.NotNull(builder);
         var result = builder.Build();
         Assert.True(result.IsSuccess);
+    }
+
+    [Fact]
+    public void Build_MultipleErrors_ReturnsAllTogether()
+    {
+        var result = AuthorizationRequestBuilder.Create()
+            .WithClientId("")           // Error: ClientId required
+            .WithNonce("")              // Error: Nonce required
+            .WithResponseMode("")       // Error: ResponseMode required
+            .WithDcql(null!)            // Error: DCQL configure cannot be null
+            .AddVerifierAttestation(null!)  // Error: Attestation cannot be null
+            .Build();
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(5, result.Errors.Count);
+        
+        var messages = result.Errors.Select(e => e.Message).ToList();
+        Assert.Contains("client_id is required", messages);
+        Assert.Contains("nonce is required", messages);
+        Assert.Contains("response_mode is required", messages);
+        Assert.Contains("DCQL configure action cannot be null", messages);
+        Assert.Contains("Verifier attestation cannot be null", messages);
     }
 }
