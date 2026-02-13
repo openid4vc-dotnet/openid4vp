@@ -101,3 +101,44 @@ public sealed class ExternalError : Error
         HttpStatusCode = httpStatusCode;
     }
 }
+
+/// <summary>
+/// Error type for JSON parsing/deserialization failures.
+/// Used when JSON document structure is malformed or invalid.
+/// Distinct from ParseError (which is broader - could be JWT, XML, etc.).
+/// </summary>
+public sealed class JsonError : Error
+{
+    /// <summary>
+    /// Gets the JSON content that failed to parse (truncated if very long).
+    /// Useful for debugging malformed JSON structures.
+    /// </summary>
+    public string? JsonContent { get; }
+
+    /// <summary>
+    /// Gets the line number where the parse error occurred (if available from JsonException).
+    /// Helps pinpoint the exact location of the problem in large JSON documents.
+    /// </summary>
+    public long? LineNumber { get; }
+
+    /// <summary>
+    /// Gets the byte position in the JSON where the parse error occurred (if available).
+    /// Useful for precise error reporting and editor integration.
+    /// </summary>
+    public long? BytePosition { get; }
+
+    /// <summary>
+    /// Initializes a new instance of the JsonError class.
+    /// </summary>
+    /// <param name="message">The human-readable error message describing what went wrong.</param>
+    /// <param name="jsonContent">Optional: the raw JSON content that failed to parse.</param>
+    /// <param name="lineNumber">Optional: the line number where the error occurred.</param>
+    /// <param name="bytePosition">Optional: the byte position where the error occurred.</param>
+    public JsonError(string message, string? jsonContent = null, long? lineNumber = null, long? bytePosition = null)
+        : base("json_error", message)
+    {
+        JsonContent = jsonContent;
+        LineNumber = lineNumber;
+        BytePosition = bytePosition;
+    }
+}

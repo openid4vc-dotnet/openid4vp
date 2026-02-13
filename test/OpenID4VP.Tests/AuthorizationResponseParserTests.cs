@@ -1,4 +1,5 @@
 using System.Text.Json;
+using OpenID4VC.Core.Results;
 using OpenID4VP.Models;
 using OpenID4VP.Parsers;
 
@@ -18,8 +19,10 @@ public class AuthorizationResponseParserTests
             ""vp_token"": ""eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9...""
         }";
         
-        var response = _parser.Parse(json);
+        var result = _parser.Parse(json);
         
+        Assert.True(result.IsSuccess);
+        var response = result.Value!;
         Assert.NotNull(response);
         Assert.NotNull(response.VpToken);
         Assert.Null(response.State);
@@ -34,8 +37,10 @@ public class AuthorizationResponseParserTests
             ""state"": ""state-abc-123""
         }";
         
-        var response = _parser.Parse(json);
+        var result = _parser.Parse(json);
         
+        Assert.True(result.IsSuccess);
+        var response = result.Value!;
         Assert.NotNull(response);
         Assert.NotNull(response.VpToken);
         Assert.Equal("state-abc-123", response.State);
@@ -51,8 +56,10 @@ public class AuthorizationResponseParserTests
             ""id_token"": ""eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9...id""
         }";
         
-        var response = _parser.Parse(json);
+        var result = _parser.Parse(json);
         
+        Assert.True(result.IsSuccess);
+        var response = result.Value!;
         Assert.NotNull(response);
         Assert.NotNull(response.VpToken);
         Assert.Equal("state-123", response.State);
@@ -69,66 +76,83 @@ public class AuthorizationResponseParserTests
             ]
         }";
         
-        var response = _parser.Parse(json);
+        var result = _parser.Parse(json);
         
+        Assert.True(result.IsSuccess);
+        var response = result.Value!;
         Assert.NotNull(response);
         Assert.NotNull(response.VpToken);
     }
 
     [Fact]
-    public void Parse_MissingVpToken_ThrowsInvalidOperationException()
+    public void Parse_MissingVpToken_ReturnsParserError()
     {
         var json = @"{ ""state"": ""state-123"" }";
         
-        var ex = Assert.Throws<InvalidOperationException>(() => _parser.Parse(json));
-        Assert.Contains("vp_token", ex.Message);
+        var result = _parser.Parse(json);
+        
+        Assert.False(result.IsSuccess);
+        Assert.Single(result.Errors);
+        Assert.IsType<ParseError>(result.Errors[0]);
     }
 
     [Fact]
-    public void Parse_NullJson_ThrowsArgumentException()
+    public void Parse_NullJson_ReturnsParserError()
     {
-        var ex = Assert.Throws<ArgumentException>(() => _parser.Parse((string)null!));
-        Assert.Equal("json", ex.ParamName);
+        var result = _parser.Parse((string)null!);
+        
+        Assert.False(result.IsSuccess);
+        Assert.Single(result.Errors);
+        Assert.IsType<ParseError>(result.Errors[0]);
     }
 
     [Fact]
-    public void Parse_EmptyJsonString_ThrowsArgumentException()
+    public void Parse_EmptyJsonString_ReturnsParserError()
     {
-        var ex = Assert.Throws<ArgumentException>(() => _parser.Parse(""));
-        Assert.Equal("json", ex.ParamName);
+        var result = _parser.Parse("");
+        
+        Assert.False(result.IsSuccess);
+        Assert.Single(result.Errors);
+        Assert.IsType<ParseError>(result.Errors[0]);
     }
 
     [Fact]
-    public void Parse_InvalidJson_Throws()
+    public void Parse_InvalidJson_ReturnsJsonError()
     {
         var invalidJson = @"{ invalid json }";
         
-        var ex = Record.Exception(() => _parser.Parse(invalidJson));
-        Assert.NotNull(ex);
+        var result = _parser.Parse(invalidJson);
+        
+        Assert.False(result.IsSuccess);
+        Assert.Single(result.Errors);
+        Assert.IsType<JsonError>(result.Errors[0]);
     }
 
     [Fact]
-    public void Parse_NotAnObject_ThrowsInvalidOperationException()
+    public void Parse_NotAnObject_ReturnsParserError()
     {
         var json = @"[""array""]";
         
-        var ex = Assert.Throws<InvalidOperationException>(() => _parser.Parse(json));
-        Assert.Contains("object", ex.Message);
+        var result = _parser.Parse(json);
+        
+        Assert.False(result.IsSuccess);
+        Assert.Single(result.Errors);
+        Assert.IsType<ParseError>(result.Errors[0]);
     }
 
-
-
     [Fact]
-    public void Parse_CaseSensitiveProperties_ThrowsInvalidOperationException()
+    public void Parse_CaseSensitiveProperties_ReturnsParserError()
     {
         var json = @"{ 
             ""VP_Token"": ""jwt..."",
             ""STATE"": ""state-123""
         }";
         
-        // JSON is case-sensitive, VP_Token is not vp_token
-        var ex = Assert.Throws<InvalidOperationException>(() => _parser.Parse(json));
-        Assert.Contains("vp_token", ex.Message);
+        var result = _parser.Parse(json);
+        
+        Assert.False(result.IsSuccess);
+        Assert.Single(result.Errors);
+        Assert.IsType<ParseError>(result.Errors[0]);
     }
 
     [Fact]
@@ -140,8 +164,10 @@ public class AuthorizationResponseParserTests
             { "state", "state-abc" }
         };
         
-        var response = _parser.ParseFormParameters(parameters);
+        var result = _parser.ParseFormParameters(parameters);
         
+        Assert.True(result.IsSuccess);
+        var response = result.Value!;
         Assert.NotNull(response);
         Assert.Equal("jwt_presentation", (string?)response.VpToken.Presentations);
         Assert.Equal("state-abc", response.State);
@@ -155,8 +181,10 @@ public class AuthorizationResponseParserTests
             { "vp_token", "jwt_presentation" }
         };
         
-        var response = _parser.ParseFormParameters(parameters);
+        var result = _parser.ParseFormParameters(parameters);
         
+        Assert.True(result.IsSuccess);
+        var response = result.Value!;
         Assert.NotNull(response);
         Assert.Equal("jwt_presentation", (string?)response.VpToken.Presentations);
         Assert.Null(response.State);
@@ -172,8 +200,10 @@ public class AuthorizationResponseParserTests
             { "id_token", "idt..." }
         };
         
-        var response = _parser.ParseFormParameters(parameters);
+        var result = _parser.ParseFormParameters(parameters);
         
+        Assert.True(result.IsSuccess);
+        var response = result.Value!;
         Assert.NotNull(response);
         Assert.Equal("vp...", (string?)response.VpToken.Presentations);
         Assert.Equal("state-x", response.State);
@@ -181,22 +211,28 @@ public class AuthorizationResponseParserTests
     }
 
     [Fact]
-    public void ParseFormParameters_MissingVpToken_ThrowsInvalidOperationException()
+    public void ParseFormParameters_MissingVpToken_ReturnsParserError()
     {
         var parameters = new Dictionary<string, string>
         {
             { "state", "state-123" }
         };
         
-        var ex = Assert.Throws<InvalidOperationException>(() => _parser.ParseFormParameters(parameters));
-        Assert.Contains("vp_token", ex.Message);
+        var result = _parser.ParseFormParameters(parameters);
+        
+        Assert.False(result.IsSuccess);
+        Assert.Single(result.Errors);
+        Assert.IsType<ParseError>(result.Errors[0]);
     }
 
     [Fact]
-    public void ParseFormParameters_NullParameters_ThrowsArgumentNullException()
+    public void ParseFormParameters_NullParameters_ReturnsParserError()
     {
-        var ex = Assert.Throws<ArgumentNullException>(() => _parser.ParseFormParameters(null!));
-        Assert.Equal("parameters", ex.ParamName);
+        var result = _parser.ParseFormParameters(null!);
+        
+        Assert.False(result.IsSuccess);
+        Assert.Single(result.Errors);
+        Assert.IsType<ParseError>(result.Errors[0]);
     }
 
     [Fact]
@@ -215,8 +251,10 @@ public class AuthorizationResponseParserTests
             ""extra_param"": ""ignored""
         }";
         
-        var response = _parser.Parse(json);
+        var result = _parser.Parse(json);
         
+        Assert.True(result.IsSuccess);
+        var response = result.Value!;
         Assert.NotNull(response);
         Assert.NotNull(response.VpToken);
         Assert.Equal("complex-state-123", response.State);

@@ -53,7 +53,7 @@ public static class CrossDeviceAuthorizationRequest
         if (!result.IsValid)
         {
             return result.Errors
-                .Select(e => new ValidationError(e))
+                .Select(ValidatorErrors.FromValidator)
                 .ToArray();
         }
 

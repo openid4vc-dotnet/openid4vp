@@ -56,7 +56,7 @@ public static class RequestObjectAuthorizationRequest
 
         if (!result.IsValid)
             return result.Errors
-                .Select(e => new ValidationError(e))
+                .Select(ValidatorErrors.FromValidator)
                 .ToArray();
 
         return buildResult.Value!;

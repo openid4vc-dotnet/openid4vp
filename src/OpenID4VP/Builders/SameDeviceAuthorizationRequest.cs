@@ -54,7 +54,7 @@ public static class SameDeviceAuthorizationRequest
 
         if (!validationResult.IsValid)
             return validationResult.Errors
-                .Select(e => new ValidationError(e))
+                .Select(ValidatorErrors.FromValidator)
                 .ToArray();
 
         return buildResult.Value!;

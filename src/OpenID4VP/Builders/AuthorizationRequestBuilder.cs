@@ -221,7 +221,7 @@ public sealed class AuthorizationRequestBuilder
             return BuilderErrors.ClientIdIsRequired();
 
         if (string.IsNullOrEmpty(_responseMode))
-            return new ValidationError("response_mode is required", "ResponseMode");
+            return BuilderErrors.ResponseModeIsRequired();
 
         // Build DCQL if configured
         var dcqlQuery = _dcqlBuilder?.Build();
