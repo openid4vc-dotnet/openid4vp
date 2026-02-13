@@ -30,6 +30,7 @@ public class AuthorizationRequestBuilderTests
             .WithClientId("test-verifier")
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.com/callback")
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
 
@@ -48,10 +49,11 @@ public class AuthorizationRequestBuilderTests
             .WithClientId("test-verifier")
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.com/callback")
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)));
 
         var ex = Assert.Throws<InvalidOperationException>(() => builder.Build());
-        Assert.Contains("Response type is required", ex.Message);
+        Assert.Contains("response_type is required", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -61,10 +63,11 @@ public class AuthorizationRequestBuilderTests
             .WithResponseType(ResponseTypes.VpToken)
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.com/callback")
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)));
 
         var ex = Assert.Throws<InvalidOperationException>(() => builder.Build());
-        Assert.Contains("Client ID is required", ex.Message);
+        Assert.Contains("client_id is required", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -74,10 +77,11 @@ public class AuthorizationRequestBuilderTests
             .WithResponseType(ResponseTypes.VpToken)
             .WithClientId("test-verifier")
             .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.com/callback")
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)));
 
         var ex = Assert.Throws<InvalidOperationException>(() => builder.Build());
-        Assert.Contains("Nonce is required", ex.Message);
+        Assert.Contains("Nonce is required", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -87,6 +91,7 @@ public class AuthorizationRequestBuilderTests
             .WithResponseType(ResponseTypes.VpToken)
             .WithClientId("test-verifier")
             .WithNonce("n-0S6_WzA2Mj")
+            .WithRedirectUri("https://verifier.example.com/callback")
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)));
 
         var ex = Assert.Throws<InvalidOperationException>(() => builder.Build());
@@ -100,7 +105,8 @@ public class AuthorizationRequestBuilderTests
             .WithResponseType(ResponseTypes.VpToken)
             .WithClientId("test-verifier")
             .WithNonce("n-0S6_WzA2Mj")
-            .WithResponseMode(ResponseModes.Fragment);
+            .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.com/callback");
 
         var ex = Assert.Throws<InvalidOperationException>(() => builder.Build());
         Assert.Contains("Either dcql_query or scope must be set", ex.Message);
@@ -114,6 +120,7 @@ public class AuthorizationRequestBuilderTests
             .WithClientId("test-verifier")
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.com/callback")
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)));
 
         var ex = Assert.Throws<InvalidOperationException>(() =>
@@ -187,9 +194,8 @@ public class AuthorizationRequestBuilderTests
             .WithResponseType(ResponseTypes.VpToken)
             .WithClientId("test-verifier")
             .WithNonce("n-0S6_WzA2Mj")
-            .WithResponseMode(ResponseModes.DirectPost)
+            .WithResponseMode(ResponseModes.Fragment)
             .WithRedirectUri("https://verifier.example.com/callback")
-            .WithResponseUri("https://verifier.example.com/response")
             .WithState("state-value")
             .WithRequestUriMethod("post")
             .WithClientMetadata(VerifierMetadataBuilder.Create().Build())
@@ -199,7 +205,6 @@ public class AuthorizationRequestBuilderTests
             .Build();
 
         Assert.Equal("https://verifier.example.com/callback", request.RedirectUri);
-        Assert.Equal("https://verifier.example.com/response", request.ResponseUri);
         Assert.Equal("state-value", request.State);
         Assert.Equal("post", request.RequestUriMethod);
         Assert.NotNull(request.ClientMetadata);
@@ -217,6 +222,7 @@ public class AuthorizationRequestBuilderTests
             .WithClientId("test-verifier")
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.com/callback")
             .WithScope("com.example.credential_presentation")
             .Build();
 
@@ -231,6 +237,7 @@ public class AuthorizationRequestBuilderTests
             .WithClientId("test-verifier")
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.com/callback")
             .WithScope("com.example.credential_presentation")
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)));
 
