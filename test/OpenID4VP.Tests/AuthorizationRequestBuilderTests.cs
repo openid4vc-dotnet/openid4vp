@@ -2,6 +2,7 @@ using OpenID4VP.Builders;
 using OpenID4VP.Common;
 using OpenID4VP.Models;
 using OpenID4VP.Dcql.Query.Builders;
+using OpenID4VC.Core.Results;
 
 namespace OpenID4VP.Tests.Builders;
 
@@ -23,9 +24,9 @@ public class AuthorizationRequestBuilderTests
     }
 
     [Fact]
-    public void Build_WithAllRequiredFields_ReturnsValidRequest()
+    public void Build_WithAllRequiredFields_ReturnsSuccess()
     {
-        var request = AuthorizationRequestBuilder.Create()
+        var result = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
             .WithClientId("test-verifier")
             .WithNonce("n-0S6_WzA2Mj")
@@ -34,6 +35,8 @@ public class AuthorizationRequestBuilderTests
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
 
+        Assert.True(result.IsSuccess);
+        var request = result.Value;
         Assert.NotNull(request);
         Assert.Equal(ResponseTypes.VpToken, request.ResponseType);
         Assert.Equal("test-verifier", request.ClientId);
@@ -43,79 +46,89 @@ public class AuthorizationRequestBuilderTests
     }
 
     [Fact]
-    public void Build_MissingResponseType_Succeeds_ButValidatorFails()
+    public void Build_MissingResponseType_Succeeds()
     {
-        var builder = AuthorizationRequestBuilder.Create()
+        var result = AuthorizationRequestBuilder.Create()
             .WithClientId("test-verifier")
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(ResponseModes.Fragment)
             .WithRedirectUri("https://verifier.example.com/callback")
-            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)));
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
 
         // Build() succeeds (permissive) - ResponseType is NOT defaulted
-        var request = builder.Build();
+        Assert.True(result.IsSuccess);
+        var request = result.Value;
         Assert.NotNull(request);
         Assert.Null(request.ResponseType);  // NO default value anymore
     }
 
     [Fact]
-    public void Build_MissingClientId_ThrowsInvalidOperationException()
+    public void Build_MissingClientId_ReturnsFailure()
     {
-        var builder = AuthorizationRequestBuilder.Create()
+        var result = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(ResponseModes.Fragment)
             .WithRedirectUri("https://verifier.example.com/callback")
-            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)));
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
 
-        var ex = Assert.Throws<InvalidOperationException>(() => builder.Build());
-        Assert.Contains("client_id is required", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.False(result.IsSuccess);
+        Assert.Single(result.Errors);
+        Assert.IsType<ValidationError>(result.Errors[0]);
+        Assert.Contains("client_id is required", result.Errors[0].Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public void Build_MissingNonce_ThrowsInvalidOperationException()
+    public void Build_MissingNonce_Succeeds()
     {
-        var builder = AuthorizationRequestBuilder.Create()
+        var result = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
             .WithClientId("test-verifier")
             .WithResponseMode(ResponseModes.Fragment)
             .WithRedirectUri("https://verifier.example.com/callback")
-            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)));
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
 
         // Build() succeeds (permissive) - Nonce is NOT defaulted
-        var request = builder.Build();
+        Assert.True(result.IsSuccess);
+        var request = result.Value;
         Assert.NotNull(request);
         Assert.Null(request.Nonce);  // NO default value anymore
     }
 
     [Fact]
-    public void Build_MissingResponseMode_Succeeds()
+    public void Build_MissingResponseMode_ReturnsFailure()
     {
-        // Build() requires response_mode to be set
-        var builder = AuthorizationRequestBuilder.Create()
+        var result = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
             .WithClientId("test-verifier")
             .WithNonce("n-0S6_WzA2Mj")
             .WithRedirectUri("https://verifier.example.com/callback")
-            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)));
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
 
-        // Build without response_mode
-        var ex = Assert.Throws<InvalidOperationException>(() => builder.Build());
-        Assert.Contains("response_mode is required", ex.Message);
+        Assert.False(result.IsSuccess);
+        Assert.Single(result.Errors);
+        Assert.IsType<ValidationError>(result.Errors[0]);
+        Assert.Contains("response_mode is required", result.Errors[0].Message);
     }
 
     [Fact]
-    public void Build_MissingDcqlAndScope_ThrowsInvalidOperationException()
+    public void Build_MissingDcqlAndScope_Succeeds()
     {
-        var builder = AuthorizationRequestBuilder.Create()
+        var result = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
             .WithClientId("test-verifier")
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(ResponseModes.Fragment)
-            .WithRedirectUri("https://verifier.example.com/callback");
+            .WithRedirectUri("https://verifier.example.com/callback")
+            .Build();
 
         // Build() succeeds (permissive) - doesn't validate dcql/scope combo
-        var request = builder.Build();
+        Assert.True(result.IsSuccess);
+        var request = result.Value;
         Assert.NotNull(request);
         Assert.Null(request.DcqlQuery);
         Assert.Null(request.Scope);
@@ -199,7 +212,7 @@ public class AuthorizationRequestBuilderTests
             .WithFormat("jwt")
             .Build();
         
-        var request = AuthorizationRequestBuilder.Create()
+        var result = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
             .WithClientId("test-verifier")
             .WithNonce("n-0S6_WzA2Mj")
@@ -213,6 +226,8 @@ public class AuthorizationRequestBuilderTests
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
 
+        Assert.True(result.IsSuccess);
+        var request = result.Value;
         Assert.Equal("https://verifier.example.com/callback", request.RedirectUri);
         Assert.Equal("state-value", request.State);
         Assert.Equal("post", request.RequestUriMethod);
@@ -226,7 +241,7 @@ public class AuthorizationRequestBuilderTests
     [Fact]
     public void Build_WithScope_SetsScope()
     {
-        var request = AuthorizationRequestBuilder.Create()
+        var result = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
             .WithClientId("test-verifier")
             .WithNonce("n-0S6_WzA2Mj")
@@ -235,24 +250,27 @@ public class AuthorizationRequestBuilderTests
             .WithScope("com.example.credential_presentation")
             .Build();
 
+        Assert.True(result.IsSuccess);
+        var request = result.Value;
         Assert.Equal("com.example.credential_presentation", request.Scope);
     }
 
     [Fact]
-    public void Build_WithDcqlAndScope_ThrowsInvalidOperationException()
+    public void Build_WithDcqlAndScope_Succeeds()
     {
-        var builder = AuthorizationRequestBuilder.Create()
+        var result = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
             .WithClientId("test-verifier")
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(ResponseModes.Fragment)
             .WithRedirectUri("https://verifier.example.com/callback")
             .WithScope("com.example.credential_presentation")
-            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)));
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
 
         // Build() succeeds (permissive)
-        var request = builder.Build();
-        Assert.NotNull(request);
+        Assert.True(result.IsSuccess);
+        var request = result.Value;
         Assert.NotNull(request.DcqlQuery);
         Assert.Equal("com.example.credential_presentation", request.Scope);
     }
@@ -272,6 +290,6 @@ public class AuthorizationRequestBuilderTests
 
         Assert.NotNull(builder);
         var result = builder.Build();
-        Assert.NotNull(result);
+        Assert.True(result.IsSuccess);
     }
 }

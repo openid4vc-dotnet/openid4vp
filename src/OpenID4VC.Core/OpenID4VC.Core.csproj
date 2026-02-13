@@ -6,9 +6,4 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\OpenID4VC.Core\OpenID4VC.Core.csproj" />
-    <ProjectReference Include="..\OpenID4VP.Dcql\OpenID4VP.Dcql.csproj" />
-  </ItemGroup>
-
 </Project>

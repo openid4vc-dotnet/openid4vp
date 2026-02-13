@@ -25,19 +25,22 @@ public class EdgeErrorAuthorizationRequestBuilderTests
             .WithResponseMode("invalid-mode");
 
         // Build() succeeds (permissive) - doesn't validate response_mode value
-        var request = builder.Build();
-        Assert.NotNull(request);
-        Assert.Equal("invalid-mode", request.ResponseMode);
+        var result = builder.Build();
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Value);
+        Assert.Equal("invalid-mode", result.Value.ResponseMode);
     }
 
     [Fact]
-    public void Build_NoResponseMode_Throws()
+    public void Build_NoResponseMode_ReturnsFailure()
     {
-        var builder = AuthorizationRequestBuilder.Create()
-            .WithClientId("verifier-1");
+        var result = AuthorizationRequestBuilder.Create()
+            .WithClientId("verifier-1")
+            .Build();
 
-        var ex = Assert.Throws<InvalidOperationException>(() => builder.Build());
-        Assert.Contains("response_mode is required", ex.Message);
+        Assert.False(result.IsSuccess);
+        Assert.Single(result.Errors);
+        Assert.Contains("response_mode is required", result.Errors[0].Message);
     }
 }
 

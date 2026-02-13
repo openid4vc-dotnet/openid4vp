@@ -18,8 +18,9 @@ public class AuthorizationRequestValidatorTests
         builder.AddTypeValues("UniversityDegree");
     }
 
-    private AuthorizationRequest CreateValidRequest() =>
-        AuthorizationRequestBuilder.Create()
+    private AuthorizationRequest CreateValidRequest()
+    {
+        var result = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
             .WithClientId("test-verifier")
             .WithNonce("n-0S6_WzA2Mj")
@@ -27,6 +28,8 @@ public class AuthorizationRequestValidatorTests
             .WithRedirectUri("https://verifier.example.com/callback")
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
+        return result.Value!;
+    }
 
     [Fact]
     public void Validate_ValidRequest_ReturnsSuccess()
@@ -48,7 +51,7 @@ public class AuthorizationRequestValidatorTests
     [Fact]
     public void Validate_InvalidResponseType_ReturnsFailure()
     {
-        var request = AuthorizationRequestBuilder.Create()
+        var buildResult = AuthorizationRequestBuilder.Create()
             .WithResponseType("invalid_type")
             .WithClientId("test-verifier")
             .WithNonce("n-0S6_WzA2Mj")
@@ -56,6 +59,7 @@ public class AuthorizationRequestValidatorTests
             .WithRedirectUri("https://verifier.example.com/callback")
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
+        var request = buildResult.Value!;
 
         var result = _validator.Validate(request);
 
@@ -66,7 +70,7 @@ public class AuthorizationRequestValidatorTests
     [Fact]
     public void Validate_VpTokenIdToken_ResponseType_IsValid()
     {
-        var request = AuthorizationRequestBuilder.Create()
+        var buildResult = AuthorizationRequestBuilder.Create()
             .WithResponseType("vp_token id_token")
             .WithClientId("test-verifier")
             .WithNonce("n-0S6_WzA2Mj")
@@ -74,6 +78,7 @@ public class AuthorizationRequestValidatorTests
             .WithRedirectUri("https://verifier.example.com/callback")
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
+        var request = buildResult.Value!;
 
         var result = _validator.Validate(request);
 
@@ -83,7 +88,7 @@ public class AuthorizationRequestValidatorTests
     [Fact]
     public void Validate_InvalidNonceCharacters_ReturnsFailure()
     {
-        var request = AuthorizationRequestBuilder.Create()
+        var buildResult = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
             .WithClientId("test-verifier")
             .WithNonce("invalid!nonce@with#special$chars")
@@ -91,6 +96,7 @@ public class AuthorizationRequestValidatorTests
             .WithRedirectUri("https://verifier.example.com/callback")
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
+        var request = buildResult.Value!;
 
         var result = _validator.Validate(request);
 
@@ -101,7 +107,7 @@ public class AuthorizationRequestValidatorTests
     [Fact]
     public void Validate_ValidNonceCharacters_IsValid()
     {
-        var request = AuthorizationRequestBuilder.Create()
+        var buildResult = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
             .WithClientId("test-verifier")
             .WithNonce("n-0S6_WzA2Mj.test~123_ABC")
@@ -109,6 +115,7 @@ public class AuthorizationRequestValidatorTests
             .WithRedirectUri("https://verifier.example.com/callback")
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
+        var request = buildResult.Value!;
 
         var result = _validator.Validate(request);
 
@@ -118,7 +125,7 @@ public class AuthorizationRequestValidatorTests
     [Fact]
     public void Validate_InvalidResponseMode_ReturnsFailure()
     {
-        var request = AuthorizationRequestBuilder.Create()
+        var buildResult = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
             .WithClientId("test-verifier")
             .WithNonce("n-0S6_WzA2Mj")
@@ -126,6 +133,7 @@ public class AuthorizationRequestValidatorTests
             .WithRedirectUri("https://verifier.example.com/callback")
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
+        var request = buildResult.Value!;
 
         var result = _validator.Validate(request);
 
@@ -137,7 +145,7 @@ public class AuthorizationRequestValidatorTests
     [InlineData("query")]
     public void Validate_ValidResponseModes_WithoutResponseUri_IsValid(string responseMode)
     {
-        var request = AuthorizationRequestBuilder.Create()
+        var buildResult = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
             .WithClientId("test-verifier")
             .WithNonce("n-0S6_WzA2Mj")
@@ -145,6 +153,7 @@ public class AuthorizationRequestValidatorTests
             .WithRedirectUri("https://verifier.example.com/callback")
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
+        var request = buildResult.Value!;
 
         var result = _validator.Validate(request);
 
@@ -156,7 +165,7 @@ public class AuthorizationRequestValidatorTests
     [InlineData("query")]
     public void Validate_SameDeviceModes_WithRedirectUri_IsValid(string responseMode)
     {
-        var request = AuthorizationRequestBuilder.Create()
+        var buildResult = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
             .WithClientId("test-verifier")
             .WithNonce("n-0S6_WzA2Mj")
@@ -164,6 +173,7 @@ public class AuthorizationRequestValidatorTests
             .WithRedirectUri("https://verifier.example.com/callback")
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
+        var request = buildResult.Value!;
 
         var result = _validator.Validate(request);
 
@@ -173,7 +183,7 @@ public class AuthorizationRequestValidatorTests
     [Fact]
     public void Validate_FragmentWithRedirectUri_IsValid()
     {
-        var request = AuthorizationRequestBuilder.Create()
+        var buildResult = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
             .WithClientId("test-verifier")
             .WithNonce("n-0S6_WzA2Mj")
@@ -181,6 +191,7 @@ public class AuthorizationRequestValidatorTests
             .WithRedirectUri("https://verifier.example.com/callback")
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
+        var request = buildResult.Value!;
 
         var result = _validator.Validate(request);
 
@@ -190,7 +201,7 @@ public class AuthorizationRequestValidatorTests
     [Fact]
     public void Validate_QueryWithRedirectUri_IsValid()
     {
-        var request = AuthorizationRequestBuilder.Create()
+        var buildResult = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
             .WithClientId("test-verifier")
             .WithNonce("n-0S6_WzA2Mj")
@@ -198,6 +209,7 @@ public class AuthorizationRequestValidatorTests
             .WithRedirectUri("https://verifier.example.com/callback")
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
+        var request = buildResult.Value!;
 
         var result = _validator.Validate(request);
 
@@ -207,7 +219,7 @@ public class AuthorizationRequestValidatorTests
     [Fact]
     public void Validate_QueryWithRedirectUri_Only_IsValid()
     {
-        var request = AuthorizationRequestBuilder.Create()
+        var buildResult = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
             .WithClientId("test-verifier")
             .WithNonce("n-0S6_WzA2Mj")
@@ -215,6 +227,7 @@ public class AuthorizationRequestValidatorTests
             .WithRedirectUri("https://verifier.example.com/callback")
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
+        var request = buildResult.Value!;
 
         var result = _validator.Validate(request);
 
@@ -224,7 +237,7 @@ public class AuthorizationRequestValidatorTests
     [Fact]
     public void Validate_InvalidStateCharacters_ReturnsFailure()
     {
-        var request = AuthorizationRequestBuilder.Create()
+        var buildResult = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
             .WithClientId("test-verifier")
             .WithNonce("n-0S6_WzA2Mj")
@@ -233,6 +246,7 @@ public class AuthorizationRequestValidatorTests
             .WithState("invalid!state@value")
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
+        var request = buildResult.Value!;
 
         var result = _validator.Validate(request);
 
@@ -243,7 +257,7 @@ public class AuthorizationRequestValidatorTests
     [Fact]
     public void Validate_ValidStateCharacters_IsValid()
     {
-        var request = AuthorizationRequestBuilder.Create()
+        var buildResult = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
             .WithClientId("test-verifier")
             .WithNonce("n-0S6_WzA2Mj")
@@ -252,6 +266,7 @@ public class AuthorizationRequestValidatorTests
             .WithState("state-123_ABC.value~test")
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
+        var request = buildResult.Value!;
 
         var result = _validator.Validate(request);
 
@@ -261,7 +276,7 @@ public class AuthorizationRequestValidatorTests
     [Fact]
     public void Validate_InvalidRequestUriMethod_ReturnsFailure()
     {
-        var request = AuthorizationRequestBuilder.Create()
+        var buildResult = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
             .WithClientId("test-verifier")
             .WithNonce("n-0S6_WzA2Mj")
@@ -270,6 +285,7 @@ public class AuthorizationRequestValidatorTests
             .WithRequestUriMethod("invalid")
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
+        var request = buildResult.Value!;
 
         var result = _validator.Validate(request);
 
@@ -282,7 +298,7 @@ public class AuthorizationRequestValidatorTests
     [InlineData("post")]
     public void Validate_ValidRequestUriMethod_IsValid(string method)
     {
-        var request = AuthorizationRequestBuilder.Create()
+        var buildResult = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
             .WithClientId("test-verifier")
             .WithNonce("n-0S6_WzA2Mj")
@@ -291,6 +307,7 @@ public class AuthorizationRequestValidatorTests
             .WithRequestUriMethod(method)
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
+        var request = buildResult.Value!;
 
         var result = _validator.Validate(request);
 
@@ -300,7 +317,7 @@ public class AuthorizationRequestValidatorTests
     [Fact]
     public void Validate_WithScope_IsValid()
     {
-        var request = AuthorizationRequestBuilder.Create()
+        var buildResult = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
             .WithClientId("test-verifier")
             .WithNonce("n-0S6_WzA2Mj")
@@ -308,6 +325,7 @@ public class AuthorizationRequestValidatorTests
             .WithRedirectUri("https://verifier.example.com/callback")
             .WithScope("com.example.credential_presentation")
             .Build();
+        var request = buildResult.Value!;
 
         var result = _validator.Validate(request);
 

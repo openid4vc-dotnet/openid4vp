@@ -1,6 +1,7 @@
 using OpenID4VP.Common;
 using OpenID4VP.Models;
 using OpenID4VP.Validators;
+using OpenID4VC.Core.Results;
 
 namespace OpenID4VP.Builders;
 
@@ -14,7 +15,7 @@ namespace OpenID4VP.Builders;
 /// 
 /// Usage:
 /// <code>
-/// var requestObject = RequestObjectAuthorizationRequest.Build(builder =>
+/// var result = RequestObjectAuthorizationRequest.Build(builder =>
 ///     builder
 ///         .WithResponseType(ResponseTypes.VpToken)
 ///         .WithClientId("verifier-1")
@@ -22,6 +23,11 @@ namespace OpenID4VP.Builders;
 ///         .WithResponseUri("https://verifier.example.com/response")
 ///         .WithDcql(dcql => dcql.AddW3cVcCredential("cred-1", b => b.AddTypeValues("UniversityDegree")))
 /// );
+/// 
+/// if (result.IsSuccess)
+///     ProcessRequest(result.Value);
+/// else
+///     LogErrors(result.Errors);
 /// </code>
 /// </summary>
 public static class RequestObjectAuthorizationRequest
@@ -30,9 +36,8 @@ public static class RequestObjectAuthorizationRequest
     /// Builds and validates a Request Object authorization request.
     /// </summary>
     /// <param name="configure">Action to configure the builder</param>
-    /// <returns>A validated AuthorizationRequest suitable for Request Object</returns>
-    /// <exception cref="ValidationException">If the request does not meet Request Object requirements</exception>
-    public static AuthorizationRequest Build(Action<AuthorizationRequestBuilder> configure)
+    /// <returns>A Result containing the validated AuthorizationRequest if successful, or errors if validation failed</returns>
+    public static Result<AuthorizationRequest> Build(Action<AuthorizationRequestBuilder> configure)
     {
         if (configure == null)
             throw new ArgumentNullException(nameof(configure));
@@ -40,23 +45,20 @@ public static class RequestObjectAuthorizationRequest
         var builder = AuthorizationRequestBuilder.Create();
         configure(builder);
         
-        AuthorizationRequest request;
-        try
-        {
-            request = builder.Build();
-        }
-        catch (InvalidOperationException ex)
-        {
-            // Convert builder validation errors to ValidationException for consistency
-            throw new ValidationException(new ValidationResult { IsValid = false, Errors = new[] { ex.Message } });
-        }
+        // Build request and stop if structural validation fails
+        var buildResult = builder.Build();
+        if (!buildResult.IsSuccess)
+            return buildResult;
 
+        // Now validate for Request Object scenario requirements
         var validator = new RequestObjectAuthorizationRequestValidator();
-        var result = validator.Validate(request);
+        var result = validator.Validate(buildResult.Value!);
 
         if (!result.IsValid)
-            throw new ValidationException(result);
+            return result.Errors
+                .Select(e => new ValidationError(e))
+                .ToArray();
 
-        return request;
+        return buildResult.Value!;
     }
 }

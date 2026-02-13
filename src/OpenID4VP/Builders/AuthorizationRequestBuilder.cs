@@ -2,6 +2,7 @@ using OpenID4VP.Common;
 using OpenID4VP.Dcql.Query.Builders;
 using OpenID4VP.Dcql.Query.Models;
 using OpenID4VP.Models;
+using OpenID4VC.Core.Results;
 
 namespace OpenID4VP.Builders;
 
@@ -213,20 +214,20 @@ public sealed class AuthorizationRequestBuilder
     /// - CrossDeviceAuthorizationRequestValidator: Minimal request for cross-device flow
     /// - RequestObjectAuthorizationRequestValidator: Request Object for cross-device (from request_uri)
     /// </summary>
-    public AuthorizationRequest Build()
+    public Result<AuthorizationRequest> Build()
     {
         // Minimal validation: only enforce absolutely required fields
         if (string.IsNullOrEmpty(_clientId))
-            throw new InvalidOperationException("client_id is required");
+            return BuilderErrors.ClientIdIsRequired();
 
         if (string.IsNullOrEmpty(_responseMode))
-            throw new InvalidOperationException("response_mode is required");
+            return new ValidationError("response_mode is required", "ResponseMode");
 
         // Build DCQL if configured
         var dcqlQuery = _dcqlBuilder?.Build();
 
         // Return the request - let scenario-specific validators check if it's suitable for the intended use
-        return new AuthorizationRequest
+        var request = new AuthorizationRequest
         {
             ResponseType = _responseType,
             ClientId = _clientId!,
@@ -243,5 +244,7 @@ public sealed class AuthorizationRequestBuilder
             VerifierInfo = _verifierInfo?.AsReadOnly(),
             TransactionData = _transactionData?.AsReadOnly()
         };
+
+        return request;
     }
 }
