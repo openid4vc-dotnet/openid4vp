@@ -46,7 +46,7 @@ public class SameDeviceAuthorizationRequestBuilderTests
         var result = SameDeviceAuthorizationRequest.Build(builder =>
             builder
                 .WithResponseType(ResponseTypes.VpToken)
-                .WithClientId("verifier-1")
+                .WithClientId("https://verifier.example.com")
                 .WithNonce("nonce-123")
                 .WithResponseMode(responseMode)
                 .WithRedirectUri("https://verifier.example.com/callback")
@@ -57,7 +57,7 @@ public class SameDeviceAuthorizationRequestBuilderTests
         var request = result.Value;
         Assert.NotNull(request);
         Assert.Equal(ResponseTypes.VpToken, request.ResponseType);
-        Assert.Equal("verifier-1", request.ClientId);
+        Assert.Equal("https://verifier.example.com", request.ClientId);
         Assert.Equal("nonce-123", request.Nonce);
         Assert.Equal(responseMode, request.ResponseMode);
         Assert.Equal("https://verifier.example.com/callback", request.RedirectUri);
@@ -71,7 +71,7 @@ public class SameDeviceAuthorizationRequestBuilderTests
     {
         var result = SameDeviceAuthorizationRequest.Build(builder =>
             builder
-                .WithClientId("verifier-1")
+                .WithClientId("https://verifier.example.com")
                 .WithNonce("nonce-123")
                 .WithResponseMode(responseMode)
                 .WithRedirectUri("https://verifier.example.com/callback")
@@ -90,7 +90,7 @@ public class SameDeviceAuthorizationRequestBuilderTests
         var result = SameDeviceAuthorizationRequest.Build(builder =>
             builder
                 .WithResponseType(ResponseTypes.VpToken)
-                .WithClientId("verifier-1")
+                .WithClientId("https://verifier.example.com")
                 .WithResponseMode(responseMode)
                 .WithRedirectUri("https://verifier.example.com/callback")
                 .WithDcql(dcql => dcql.AddW3cVcCredential("cred-1", b => ConfigureValidW3cCredential(b)))
@@ -108,7 +108,7 @@ public class SameDeviceAuthorizationRequestBuilderTests
         var result = SameDeviceAuthorizationRequest.Build(builder =>
             builder
                 .WithResponseType(ResponseTypes.VpToken)
-                .WithClientId("verifier-1")
+                .WithClientId("https://verifier.example.com")
                 .WithNonce("nonce-123")
                 .WithResponseMode(responseMode)
                 // Note: NOT setting redirect_uri
@@ -128,7 +128,7 @@ public class SameDeviceAuthorizationRequestBuilderTests
         var result = SameDeviceAuthorizationRequest.Build(builder =>
             builder
                 .WithResponseType(ResponseTypes.VpToken)
-                .WithClientId("verifier-1")
+                .WithClientId("https://verifier.example.com")
                 .WithNonce("nonce-123")
                 .WithResponseMode(responseMode)
                 .WithRedirectUri("https://verifier.example.com/callback")
@@ -149,7 +149,7 @@ public class SameDeviceAuthorizationRequestBuilderTests
         var result = SameDeviceAuthorizationRequest.Build(builder =>
             builder
                 .WithResponseType(ResponseTypes.VpToken)
-                .WithClientId("verifier-1")
+                .WithClientId("https://verifier.example.com")
                 .WithNonce("nonce-123")
                 .WithResponseMode(responseMode)
                 .WithRedirectUri("https://verifier.example.com/callback")

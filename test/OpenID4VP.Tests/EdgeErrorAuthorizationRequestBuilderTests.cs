@@ -21,7 +21,7 @@ public class EdgeErrorAuthorizationRequestBuilderTests
     public void Build_InvalidResponseMode_Throws()
     {
         var builder = AuthorizationRequestBuilder.Create()
-            .WithClientId("verifier-1")
+            .WithClientId("https://verifier.example.com")
             .WithResponseMode("invalid-mode");
 
         // Build() succeeds (permissive) - doesn't validate response_mode value
@@ -35,7 +35,7 @@ public class EdgeErrorAuthorizationRequestBuilderTests
     public void Build_NoResponseMode_ReturnsFailure()
     {
         var result = AuthorizationRequestBuilder.Create()
-            .WithClientId("verifier-1")
+            .WithClientId("https://verifier.example.com")
             .Build();
 
         Assert.False(result.IsSuccess);

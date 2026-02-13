@@ -57,13 +57,56 @@ public sealed class AuthorizationRequestBuilder
 
     /// <summary>
     /// Sets the Client Identifier of the Verifier. REQUIRED.
+    /// 
+    /// The client_id can be:
+    /// - A direct HTTPS URL: "https://verifier.example.org"
+    /// - A prefixed identifier: "redirect_uri:https://verifier.example.com/callback"
+    /// 
+    /// Use the WithClientId(prefix, value) overload for type-safe construction with a prefix.
     /// </summary>
     public AuthorizationRequestBuilder WithClientId(string? clientId)
     {
         if (string.IsNullOrWhiteSpace(clientId))
+        {
             _errors.Add(BuilderErrors.ClientIdIsRequired());
+        }
 
         _clientId = clientId;
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the Client Identifier of the Verifier using a prefix constant and value. REQUIRED.
+    /// 
+    /// This overload provides a type-safe, fluent way to build client identifiers by separating
+    /// the prefix from the value. The method constructs the full client identifier as: prefix:value
+    /// 
+    /// Example: WithClientId(ClientIdentifierPrefix.X509SanDns, "client.example.org")
+    ///          → Constructs: "x509_san_dns:client.example.org"
+    /// 
+    /// Note: Only the 6 real prefixes from the OpenID4VP specification are supported here.
+    /// For direct HTTPS URLs, use the WithClientId(string) overload instead.
+    /// </summary>
+    /// <param name="prefix">The prefix constant (e.g., ClientIdentifierPrefix.X509SanDns)</param>
+    /// <param name="value">The value portion of the client identifier</param>
+    public AuthorizationRequestBuilder WithClientId(string? prefix, string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            _errors.Add(BuilderErrors.ClientIdIsRequired());
+            _clientId = null;
+            return this;
+        }
+
+        if (string.IsNullOrWhiteSpace(prefix))
+        {
+            _errors.Add(BuilderErrors.ClientIdIsRequired());
+            _clientId = null;
+            return this;
+        }
+
+        // All prefixes use colon separator: prefix:value
+        _clientId = $"{prefix}:{value}";
         return this;
     }
 

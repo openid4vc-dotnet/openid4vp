@@ -52,7 +52,7 @@ public class RequestObjectAuthorizationRequestBuilderTests
         var result = RequestObjectAuthorizationRequest.Build(builder =>
             builder
                 .WithResponseType(ResponseTypes.VpToken)
-                .WithClientId("verifier-1")
+                .WithClientId("https://verifier.example.com")
                 .WithNonce("nonce-123")
                 .WithResponseMode(ResponseModes.DirectPost)
                 .WithResponseUri("https://verifier.example.com/response")
@@ -63,7 +63,7 @@ public class RequestObjectAuthorizationRequestBuilderTests
         var request = result.Value;
         Assert.NotNull(request);
         Assert.Equal(ResponseTypes.VpToken, request.ResponseType);
-        Assert.Equal("verifier-1", request.ClientId);
+        Assert.Equal("https://verifier.example.com", request.ClientId);
         Assert.Equal("nonce-123", request.Nonce);
         Assert.Equal("https://verifier.example.com/response", request.ResponseUri);
         Assert.NotNull(request.DcqlQuery);
@@ -76,7 +76,7 @@ public class RequestObjectAuthorizationRequestBuilderTests
         var result = RequestObjectAuthorizationRequest.Build(builder =>
             builder
                 .WithResponseType(ResponseTypes.VpToken)
-                .WithClientId("verifier-1")
+                .WithClientId("https://verifier.example.com")
                 .WithNonce("nonce-123")
                 .WithResponseMode(ResponseModes.DirectPost)
                 .WithResponseUri("https://verifier.example.com/response")
@@ -87,7 +87,7 @@ public class RequestObjectAuthorizationRequestBuilderTests
         var request = result.Value;
         Assert.NotNull(request);
         Assert.Equal(ResponseTypes.VpToken, request.ResponseType);
-        Assert.Equal("verifier-1", request.ClientId);
+        Assert.Equal("https://verifier.example.com", request.ClientId);
         Assert.Equal("nonce-123", request.Nonce);
         Assert.Equal("https://verifier.example.com/response", request.ResponseUri);
         Assert.Equal("openid profile", request.Scope);
@@ -99,7 +99,7 @@ public class RequestObjectAuthorizationRequestBuilderTests
     {
         var result = RequestObjectAuthorizationRequest.Build(builder =>
             builder
-                .WithClientId("verifier-1")
+                .WithClientId("https://verifier.example.com")
                 .WithNonce("nonce-123")
                 .WithResponseMode(ResponseModes.DirectPost)
                 .WithResponseUri("https://verifier.example.com/response")
@@ -116,7 +116,7 @@ public class RequestObjectAuthorizationRequestBuilderTests
         var result = RequestObjectAuthorizationRequest.Build(builder =>
             builder
                 .WithResponseType(ResponseTypes.VpToken)
-                .WithClientId("verifier-1")
+                .WithClientId("https://verifier.example.com")
                 .WithResponseMode(ResponseModes.DirectPost)
                 .WithResponseUri("https://verifier.example.com/response")
                 .WithDcql(dcql => dcql.AddW3cVcCredential("cred-1", b => ConfigureValidW3cCredential(b)))
@@ -132,7 +132,7 @@ public class RequestObjectAuthorizationRequestBuilderTests
         var result = RequestObjectAuthorizationRequest.Build(builder =>
             builder
                 .WithResponseType(ResponseTypes.VpToken)
-                .WithClientId("verifier-1")
+                .WithClientId("https://verifier.example.com")
                 .WithNonce("nonce-123")
                 .WithResponseMode(ResponseModes.DirectPost)
                 .WithDcql(dcql => dcql.AddW3cVcCredential("cred-1", b => ConfigureValidW3cCredential(b)))
@@ -166,7 +166,7 @@ public class RequestObjectAuthorizationRequestBuilderTests
         var result = RequestObjectAuthorizationRequest.Build(builder =>
             builder
                 .WithResponseType(ResponseTypes.VpToken)
-                .WithClientId("verifier-1")
+                .WithClientId("https://verifier.example.com")
                 .WithNonce("nonce-123")
                 .WithResponseMode(ResponseModes.DirectPost)
                 .WithResponseUri("https://verifier.example.com/response")
@@ -183,7 +183,7 @@ public class RequestObjectAuthorizationRequestBuilderTests
         var result = RequestObjectAuthorizationRequest.Build(builder =>
             builder
                 .WithResponseType(ResponseTypes.VpToken)
-                .WithClientId("verifier-1")
+                .WithClientId("https://verifier.example.com")
                 .WithNonce("nonce-123")
                 .WithResponseMode(ResponseModes.DirectPost)
                 .WithResponseUri("https://verifier.example.com/response")
@@ -202,7 +202,7 @@ public class RequestObjectAuthorizationRequestBuilderTests
         var result = RequestObjectAuthorizationRequest.Build(builder =>
             builder
                 .WithResponseType(ResponseTypes.VpToken)
-                .WithClientId("verifier-1")
+                .WithClientId("https://verifier.example.com")
                 .WithNonce("nonce-123")
                 .WithResponseMode(ResponseModes.DirectPost)
                 .WithResponseUri("https://verifier.example.com/response")
@@ -221,7 +221,7 @@ public class RequestObjectAuthorizationRequestBuilderTests
         var result = RequestObjectAuthorizationRequest.Build(builder =>
             builder
                 .WithResponseType(ResponseTypes.VpToken)
-                .WithClientId("verifier-1")
+                .WithClientId("https://verifier.example.com")
                 .WithNonce("nonce-123")
                 .WithResponseMode(ResponseModes.DirectPost)
                 .WithResponseUri("https://verifier.example.com/response")
@@ -240,7 +240,7 @@ public class RequestObjectAuthorizationRequestBuilderTests
         var result = RequestObjectAuthorizationRequest.Build(builder =>
             builder
                 .WithResponseType(ResponseTypes.VpToken)
-                .WithClientId("verifier-1")
+                .WithClientId("https://verifier.example.com")
                 .WithNonce("nonce-123")
                 .WithResponseMode(ResponseModes.DirectPost)
                 .WithResponseUri("https://verifier.example.com/response")
@@ -260,7 +260,7 @@ public class RequestObjectAuthorizationRequestBuilderTests
         var result = RequestObjectAuthorizationRequest.Build(builder =>
             builder
                 .WithResponseType(ResponseTypes.VpToken)
-                .WithClientId("verifier-1")
+                .WithClientId("https://verifier.example.com")
                 .WithNonce("nonce-123")
                 .WithResponseMode(ResponseModes.DirectPost)
                 .WithResponseUri("https://verifier.example.com/response")
@@ -278,7 +278,7 @@ public class RequestObjectAuthorizationRequestBuilderTests
         var result = RequestObjectAuthorizationRequest.Build(builder =>
             builder
                 .WithResponseType(ResponseTypes.VpToken)
-                .WithClientId("verifier-1")
+                .WithClientId("https://verifier.example.com")
                 .WithNonce("nonce-123")
                 .WithResponseMode(ResponseModes.DirectPost)
                 .WithResponseUri("https://verifier.example.com/response")

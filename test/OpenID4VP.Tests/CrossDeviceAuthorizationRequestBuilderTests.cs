@@ -50,7 +50,7 @@ public class CrossDeviceAuthorizationRequestBuilderTests
         // NO response_type, nonce, dcql_query allowed!
         var result = CrossDeviceAuthorizationRequest.Build(builder =>
             builder
-                .WithClientId("verifier-1")
+                .WithClientId("https://verifier.example.com")
                 .WithRequestUri("https://verifier.example.com/request")
                 .WithResponseMode(responseMode)
         );
@@ -58,7 +58,7 @@ public class CrossDeviceAuthorizationRequestBuilderTests
         Assert.True(result.IsSuccess);
         var request = result.Value;
         Assert.NotNull(request);
-        Assert.Equal("verifier-1", request.ClientId);
+        Assert.Equal("https://verifier.example.com", request.ClientId);
         // The request object will have placeholder values for other fields
         // because AuthorizationRequest requires them, but they should come from RequestObject
     }
@@ -85,7 +85,7 @@ public class CrossDeviceAuthorizationRequestBuilderTests
     {
         var result = CrossDeviceAuthorizationRequest.Build(builder =>
             builder
-                .WithClientId("verifier-1")
+                .WithClientId("https://verifier.example.com")
                 .WithResponseMode(responseMode)
                 // Note: NOT setting request_uri
         );
@@ -103,7 +103,7 @@ public class CrossDeviceAuthorizationRequestBuilderTests
         var result = CrossDeviceAuthorizationRequest.Build(builder =>
             builder
                 .WithResponseType(ResponseTypes.VpToken)  // FORBIDDEN!
-                .WithClientId("verifier-1")
+                .WithClientId("https://verifier.example.com")
                 .WithRequestUri("https://verifier.example.com/request")
                 .WithResponseMode(responseMode)
         );
@@ -121,7 +121,7 @@ public class CrossDeviceAuthorizationRequestBuilderTests
         var result = CrossDeviceAuthorizationRequest.Build(builder =>
             builder
                 .WithNonce("nonce-123")  // FORBIDDEN!
-                .WithClientId("verifier-1")
+                .WithClientId("https://verifier.example.com")
                 .WithRequestUri("https://verifier.example.com/request")
                 .WithResponseMode(responseMode)
         );
@@ -138,7 +138,7 @@ public class CrossDeviceAuthorizationRequestBuilderTests
         // dcql_query FORBIDDEN in minimal cross-device request
         var result = CrossDeviceAuthorizationRequest.Build(builder =>
             builder
-                .WithClientId("verifier-1")
+                .WithClientId("https://verifier.example.com")
                 .WithRequestUri("https://verifier.example.com/request")
                 .WithResponseMode(responseMode)
                 .WithDcql(dcql => dcql.AddW3cVcCredential("cred-1", b => b.AddTypeValues("UniversityDegree")))  // FORBIDDEN!
@@ -156,7 +156,7 @@ public class CrossDeviceAuthorizationRequestBuilderTests
         // redirect_uri FORBIDDEN in cross-device
         var result = CrossDeviceAuthorizationRequest.Build(builder =>
             builder
-                .WithClientId("verifier-1")
+                .WithClientId("https://verifier.example.com")
                 .WithRequestUri("https://verifier.example.com/request")
                 .WithResponseMode(responseMode)
                 .WithRedirectUri("https://verifier.example.com/callback")  // FORBIDDEN!
@@ -174,7 +174,7 @@ public class CrossDeviceAuthorizationRequestBuilderTests
         // state is optional in cross-device
         var result = CrossDeviceAuthorizationRequest.Build(builder =>
             builder
-                .WithClientId("verifier-1")
+                .WithClientId("https://verifier.example.com")
                 .WithRequestUri("https://verifier.example.com/request")
                 .WithResponseMode(responseMode)
                 .WithState("state-456")

@@ -22,7 +22,7 @@ public class AuthorizationRequestValidatorTests
     {
         var result = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
-            .WithClientId("test-verifier")
+            .WithClientId("https://verifier.example.com")
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(ResponseModes.Fragment)
             .WithRedirectUri("https://verifier.example.com/callback")
@@ -53,7 +53,7 @@ public class AuthorizationRequestValidatorTests
     {
         var buildResult = AuthorizationRequestBuilder.Create()
             .WithResponseType("invalid_type")
-            .WithClientId("test-verifier")
+            .WithClientId("https://verifier.example.com")
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(ResponseModes.Fragment)
             .WithRedirectUri("https://verifier.example.com/callback")
@@ -72,7 +72,7 @@ public class AuthorizationRequestValidatorTests
     {
         var buildResult = AuthorizationRequestBuilder.Create()
             .WithResponseType("vp_token id_token")
-            .WithClientId("test-verifier")
+            .WithClientId("https://verifier.example.com")
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(ResponseModes.Fragment)
             .WithRedirectUri("https://verifier.example.com/callback")
@@ -90,7 +90,7 @@ public class AuthorizationRequestValidatorTests
     {
         var buildResult = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
-            .WithClientId("test-verifier")
+            .WithClientId("https://verifier.example.com")
             .WithNonce("invalid!nonce@with#special$chars")
             .WithResponseMode(ResponseModes.Fragment)
             .WithRedirectUri("https://verifier.example.com/callback")
@@ -109,7 +109,7 @@ public class AuthorizationRequestValidatorTests
     {
         var buildResult = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
-            .WithClientId("test-verifier")
+            .WithClientId("https://verifier.example.com")
             .WithNonce("n-0S6_WzA2Mj.test~123_ABC")
             .WithResponseMode(ResponseModes.Fragment)
             .WithRedirectUri("https://verifier.example.com/callback")
@@ -127,7 +127,7 @@ public class AuthorizationRequestValidatorTests
     {
         var buildResult = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
-            .WithClientId("test-verifier")
+            .WithClientId("https://verifier.example.com")
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode("fragment")
             .WithRedirectUri("https://verifier.example.com/callback")
@@ -147,7 +147,7 @@ public class AuthorizationRequestValidatorTests
     {
         var buildResult = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
-            .WithClientId("test-verifier")
+            .WithClientId("https://verifier.example.com")
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(responseMode)
             .WithRedirectUri("https://verifier.example.com/callback")
@@ -167,7 +167,7 @@ public class AuthorizationRequestValidatorTests
     {
         var buildResult = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
-            .WithClientId("test-verifier")
+            .WithClientId("https://verifier.example.com")
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(responseMode)
             .WithRedirectUri("https://verifier.example.com/callback")
@@ -185,7 +185,7 @@ public class AuthorizationRequestValidatorTests
     {
         var buildResult = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
-            .WithClientId("test-verifier")
+            .WithClientId("https://verifier.example.com")
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(ResponseModes.Fragment)
             .WithRedirectUri("https://verifier.example.com/callback")
@@ -203,7 +203,7 @@ public class AuthorizationRequestValidatorTests
     {
         var buildResult = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
-            .WithClientId("test-verifier")
+            .WithClientId("https://verifier.example.com")
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(ResponseModes.Query)
             .WithRedirectUri("https://verifier.example.com/callback")
@@ -221,7 +221,7 @@ public class AuthorizationRequestValidatorTests
     {
         var buildResult = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
-            .WithClientId("test-verifier")
+            .WithClientId("https://verifier.example.com")
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(ResponseModes.Query)
             .WithRedirectUri("https://verifier.example.com/callback")
@@ -239,7 +239,7 @@ public class AuthorizationRequestValidatorTests
     {
         var buildResult = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
-            .WithClientId("test-verifier")
+            .WithClientId("https://verifier.example.com")
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(ResponseModes.Fragment)
             .WithRedirectUri("https://verifier.example.com/callback")
@@ -259,7 +259,7 @@ public class AuthorizationRequestValidatorTests
     {
         var buildResult = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
-            .WithClientId("test-verifier")
+            .WithClientId("https://verifier.example.com")
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(ResponseModes.Fragment)
             .WithRedirectUri("https://verifier.example.com/callback")
@@ -278,7 +278,7 @@ public class AuthorizationRequestValidatorTests
     {
         var buildResult = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
-            .WithClientId("test-verifier")
+            .WithClientId("https://verifier.example.com")
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(ResponseModes.Fragment)
             .WithRedirectUri("https://verifier.example.com/callback")
@@ -300,7 +300,7 @@ public class AuthorizationRequestValidatorTests
     {
         var buildResult = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
-            .WithClientId("test-verifier")
+            .WithClientId("https://verifier.example.com")
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(ResponseModes.Fragment)
             .WithRedirectUri("https://verifier.example.com/callback")
@@ -319,7 +319,7 @@ public class AuthorizationRequestValidatorTests
     {
         var buildResult = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
-            .WithClientId("test-verifier")
+            .WithClientId("https://verifier.example.com")
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(ResponseModes.Fragment)
             .WithRedirectUri("https://verifier.example.com/callback")

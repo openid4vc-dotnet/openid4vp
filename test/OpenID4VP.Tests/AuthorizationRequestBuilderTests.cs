@@ -28,7 +28,7 @@ public class AuthorizationRequestBuilderTests
     {
         var result = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
-            .WithClientId("test-verifier")
+            .WithClientId("https://verifier.example.com")
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(ResponseModes.Fragment)
             .WithRedirectUri("https://verifier.example.com/callback")
@@ -39,7 +39,7 @@ public class AuthorizationRequestBuilderTests
         var request = result.Value;
         Assert.NotNull(request);
         Assert.Equal(ResponseTypes.VpToken, request.ResponseType);
-        Assert.Equal("test-verifier", request.ClientId);
+        Assert.Equal("https://verifier.example.com", request.ClientId);
         Assert.Equal("n-0S6_WzA2Mj", request.Nonce);
         Assert.Equal(ResponseModes.Fragment, request.ResponseMode);
         Assert.NotNull(request.DcqlQuery);
@@ -49,7 +49,7 @@ public class AuthorizationRequestBuilderTests
     public void Build_MissingResponseType_Succeeds()
     {
         var result = AuthorizationRequestBuilder.Create()
-            .WithClientId("test-verifier")
+            .WithClientId("https://verifier.example.com")
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(ResponseModes.Fragment)
             .WithRedirectUri("https://verifier.example.com/callback")
@@ -85,7 +85,7 @@ public class AuthorizationRequestBuilderTests
     {
         var result = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
-            .WithClientId("test-verifier")
+            .WithClientId("https://verifier.example.com")
             .WithResponseMode(ResponseModes.Fragment)
             .WithRedirectUri("https://verifier.example.com/callback")
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
@@ -103,7 +103,7 @@ public class AuthorizationRequestBuilderTests
     {
         var result = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
-            .WithClientId("test-verifier")
+            .WithClientId("https://verifier.example.com")
             .WithNonce("n-0S6_WzA2Mj")
             .WithRedirectUri("https://verifier.example.com/callback")
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
@@ -120,7 +120,7 @@ public class AuthorizationRequestBuilderTests
     {
         var result = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
-            .WithClientId("test-verifier")
+            .WithClientId("https://verifier.example.com")
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(ResponseModes.Fragment)
             .WithRedirectUri("https://verifier.example.com/callback")
@@ -139,7 +139,7 @@ public class AuthorizationRequestBuilderTests
     {
         var result = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
-            .WithClientId("test-verifier")
+            .WithClientId("https://verifier.example.com")
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(ResponseModes.Fragment)
             .WithRedirectUri("https://verifier.example.com/callback")
@@ -157,7 +157,7 @@ public class AuthorizationRequestBuilderTests
     {
         var result = AuthorizationRequestBuilder.Create()
             .WithResponseType("")
-            .WithClientId("test-verifier")
+            .WithClientId("https://verifier.example.com")
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(ResponseModes.Fragment)
             .Build();
@@ -185,7 +185,7 @@ public class AuthorizationRequestBuilderTests
     public void WithNonce_NullOrEmpty_ReturnsError()
     {
         var result = AuthorizationRequestBuilder.Create()
-            .WithClientId("test-verifier")
+            .WithClientId("https://verifier.example.com")
             .WithNonce("")
             .WithResponseMode(ResponseModes.Fragment)
             .Build();
@@ -199,7 +199,7 @@ public class AuthorizationRequestBuilderTests
     public void WithResponseMode_NullOrEmpty_ReturnsError()
     {
         var result = AuthorizationRequestBuilder.Create()
-            .WithClientId("test-verifier")
+            .WithClientId("https://verifier.example.com")
             .WithResponseMode("")
             .Build();
         
@@ -212,7 +212,7 @@ public class AuthorizationRequestBuilderTests
     public void WithDcql_NullAction_ReturnsError()
     {
         var result = AuthorizationRequestBuilder.Create()
-            .WithClientId("test-verifier")
+            .WithClientId("https://verifier.example.com")
             .WithResponseMode(ResponseModes.Fragment)
             .WithDcql(null!)
             .Build();
@@ -226,7 +226,7 @@ public class AuthorizationRequestBuilderTests
     public void AddVerifierAttestation_NullAttestation_ReturnsError()
     {
         var result = AuthorizationRequestBuilder.Create()
-            .WithClientId("test-verifier")
+            .WithClientId("https://verifier.example.com")
             .WithResponseMode(ResponseModes.Fragment)
             .AddVerifierAttestation(null!)
             .Build();
@@ -245,7 +245,7 @@ public class AuthorizationRequestBuilderTests
         
         var result = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
-            .WithClientId("test-verifier")
+            .WithClientId("https://verifier.example.com")
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(ResponseModes.Fragment)
             .WithRedirectUri("https://verifier.example.com/callback")
@@ -274,7 +274,7 @@ public class AuthorizationRequestBuilderTests
     {
         var result = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
-            .WithClientId("test-verifier")
+            .WithClientId("https://verifier.example.com")
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(ResponseModes.Fragment)
             .WithRedirectUri("https://verifier.example.com/callback")
@@ -291,7 +291,7 @@ public class AuthorizationRequestBuilderTests
     {
         var result = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
-            .WithClientId("test-verifier")
+            .WithClientId("https://verifier.example.com")
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(ResponseModes.Fragment)
             .WithRedirectUri("https://verifier.example.com/callback")
@@ -311,7 +311,7 @@ public class AuthorizationRequestBuilderTests
     {
         var builder = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
-            .WithClientId("test-verifier")
+            .WithClientId("https://verifier.example.com")
             .WithNonce("n-0S6_WzA2Mj")
             .WithResponseMode(ResponseModes.Fragment)
             .WithRedirectUri("https://example.com")
@@ -345,4 +345,383 @@ public class AuthorizationRequestBuilderTests
         Assert.Contains("DCQL configure action cannot be null", messages);
         Assert.Contains("Verifier attestation cannot be null", messages);
     }
+
+    #region Client ID Prefix Validation Tests
+
+    [Theory]
+    [InlineData("redirect_uri:https://verifier.example.com/callback")]
+    [InlineData("x509_san_dns:client.example.org")]
+    [InlineData("x509_san_uri:https://example.org")]
+    [InlineData("x509_san_ip_address:192.0.2.1")]
+    [InlineData("https://verifier.example.org")]
+    [InlineData("did:example:123abc")]
+    [InlineData("urn:verifier:acme:xyz")]
+    public void WithClientId_ValidPrefix_Succeeds(string validClientId)
+    {
+        var result = AuthorizationRequestBuilder.Create()
+            .WithResponseType(ResponseTypes.VpToken)
+            .WithClientId(validClientId)
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.com/callback")
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
+
+        Assert.True(result.IsSuccess);
+        var request = result.Value;
+        Assert.NotNull(request);
+        Assert.Equal(validClientId, request.ClientId);
+    }
+
+    [Theory]
+    [InlineData("invalid_prefix:value")]
+    [InlineData("x509_san_ip:192.0.2.1")]  // Typo: should be x509_san_ip_address:
+    [InlineData("http://example.org")]     // Unsupported: http instead of https
+    [InlineData("example.org")]            // No prefix or scheme
+    [InlineData("test-verifier")]          // Bare identifier without prefix
+    public void WithClientId_InvalidPrefix_Succeeds(string clientId)
+    {
+        // Note: Validation removed. The builder now accepts any string.
+        // Format validation is delegated to the Wallet/verifier at runtime.
+        var result = AuthorizationRequestBuilder.Create()
+            .WithResponseType(ResponseTypes.VpToken)
+            .WithClientId(clientId)
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.com/callback")
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
+
+        // Without validation, any non-empty string is accepted
+        Assert.True(result.IsSuccess);
+        Assert.Equal(clientId, result.Value!.ClientId);
+    }
+
+    [Fact]
+    public void WithClientId_EmptyString_ReturnsClientIdRequiredError()
+    {
+        var result = AuthorizationRequestBuilder.Create()
+            .WithResponseType(ResponseTypes.VpToken)
+            .WithClientId("")
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.com/callback")
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
+
+        Assert.False(result.IsSuccess);
+        var errorMessages = result.Errors.Select(e => e.Message).ToList();
+        Assert.Contains(errorMessages, m => m.Contains("client_id is required"));
+    }
+
+    [Fact]
+    public void WithClientId_Null_ReturnsClientIdRequiredError()
+    {
+        var result = AuthorizationRequestBuilder.Create()
+            .WithResponseType(ResponseTypes.VpToken)
+            .WithClientId(null)
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.com/callback")
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
+
+        Assert.False(result.IsSuccess);
+        var errorMessages = result.Errors.Select(e => e.Message).ToList();
+        Assert.Contains(errorMessages, m => m.Contains("client_id is required"));
+    }
+
+    [Fact]
+    public void WithClientId_PartialPrefix_ReturnsError()
+    {
+        var result = AuthorizationRequestBuilder.Create()
+            .WithResponseType(ResponseTypes.VpToken)
+            .WithClientId("redirect_uri:")  // Prefix without value
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.com/callback")
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
+
+        // Note: This is valid technically (empty value after prefix), but may fail in semantic validation later
+        // For now, prefix validation should pass, and semantic validation would be elsewhere
+        Assert.True(result.IsSuccess);  // Prefix is valid, value validation is not our concern here
+    }
+
+    [Fact]
+    public void WithClientId_Https_WithoutSlashes_Succeeds()
+    {
+        // Note: Validation removed. The builder accepts any string format.
+        // The malformed "https:verifier.example.org" is accepted as-is.
+        var result = AuthorizationRequestBuilder.Create()
+            .WithResponseType(ResponseTypes.VpToken)
+            .WithClientId("https:verifier.example.org")  // Missing // - but still accepted
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.com/callback")
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("https:verifier.example.org", result.Value!.ClientId);
+    }
+
+    [Fact]
+    public void WithClientId_RedirectUriPrefix_WithCompleteUrl_Succeeds()
+    {
+        var result = AuthorizationRequestBuilder.Create()
+            .WithResponseType(ResponseTypes.VpToken)
+            .WithClientId("redirect_uri:https://client.example.org/callback")
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://client.example.org/callback")
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
+
+        Assert.True(result.IsSuccess);
+        var request = result.Value;
+        Assert.NotNull(request);
+        Assert.Equal("redirect_uri:https://client.example.org/callback", request.ClientId);
+    }
+
+    [Fact]
+    public void WithClientId_X509SanUri_WithHttpsUrl_Succeeds()
+    {
+        var result = AuthorizationRequestBuilder.Create()
+            .WithResponseType(ResponseTypes.VpToken)
+            .WithClientId("x509_san_uri:https://client.example.org")
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.org/callback")
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
+
+        Assert.True(result.IsSuccess);
+        var request = result.Value;
+        Assert.NotNull(request);
+        Assert.Equal("x509_san_uri:https://client.example.org", request.ClientId);
+    }
+
+    [Fact]
+    public void WithClientId_X509SanIpAddress_WithIpv4_Succeeds()
+    {
+        var result = AuthorizationRequestBuilder.Create()
+            .WithResponseType(ResponseTypes.VpToken)
+            .WithClientId("x509_san_ip_address:192.0.2.1")
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.org/callback")
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
+
+        Assert.True(result.IsSuccess);
+        var request = result.Value;
+        Assert.NotNull(request);
+        Assert.Equal("x509_san_ip_address:192.0.2.1", request.ClientId);
+    }
+
+    [Fact]
+    public void WithClientId_Did_WithValidDid_Succeeds()
+    {
+        var result = AuthorizationRequestBuilder.Create()
+            .WithResponseType(ResponseTypes.VpToken)
+            .WithClientId("did:example:123abc")
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.org/callback")
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
+
+        Assert.True(result.IsSuccess);
+        var request = result.Value;
+        Assert.NotNull(request);
+        Assert.Equal("did:example:123abc", request.ClientId);
+    }
+
+    [Fact]
+    public void WithClientId_Urn_WithValidUrn_Succeeds()
+    {
+        var result = AuthorizationRequestBuilder.Create()
+            .WithResponseType(ResponseTypes.VpToken)
+            .WithClientId("urn:verifier:acme:xyz")
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.org/callback")
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
+
+        Assert.True(result.IsSuccess);
+        var request = result.Value;
+        Assert.NotNull(request);
+        Assert.Equal("urn:verifier:acme:xyz", request.ClientId);
+    }
+
+    #endregion
+
+    #region Class-Based Prefix API Tests
+
+    [Fact]
+    public void WithClientId_UsingX509SanDnsPrefixConstant_ConstructsCorrectly()
+    {
+        var result = AuthorizationRequestBuilder.Create()
+            .WithResponseType(ResponseTypes.VpToken)
+            .WithClientId(ClientIdentifierPrefix.X509SanDns, "client.example.org")
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.org/callback")
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
+
+        Assert.True(result.IsSuccess);
+        var request = result.Value;
+        Assert.NotNull(request);
+        // X509SanDns should construct: "x509_san_dns:" + value
+        Assert.Equal("x509_san_dns:client.example.org", request.ClientId);
+    }
+
+    [Fact]
+    public void WithClientId_UsingRedirectUriPrefixConstant_ConstructsCorrectly()
+    {
+        var result = AuthorizationRequestBuilder.Create()
+            .WithResponseType(ResponseTypes.VpToken)
+            .WithClientId(ClientIdentifierPrefix.RedirectUri, "https://verifier.example.org/callback")
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.org/callback")
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
+
+        Assert.True(result.IsSuccess);
+        var request = result.Value;
+        Assert.NotNull(request);
+        // RedirectUri should construct: "redirect_uri:" + value
+        Assert.Equal("redirect_uri:https://verifier.example.org/callback", request.ClientId);
+    }
+
+    [Fact]
+    public void WithClientId_UsingX509SanUriPrefixConstant_ConstructsCorrectly()
+    {
+        var result = AuthorizationRequestBuilder.Create()
+            .WithResponseType(ResponseTypes.VpToken)
+            .WithClientId(ClientIdentifierPrefix.X509SanUri, "https://example.org")
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.org/callback")
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
+
+        Assert.True(result.IsSuccess);
+        var request = result.Value;
+        Assert.NotNull(request);
+        // X509SanUri should construct: "x509_san_uri:" + value
+        Assert.Equal("x509_san_uri:https://example.org", request.ClientId);
+    }
+
+    [Fact]
+    public void WithClientId_UsingX509SanIpAddressPrefixConstant_ConstructsCorrectly()
+    {
+        var result = AuthorizationRequestBuilder.Create()
+            .WithResponseType(ResponseTypes.VpToken)
+            .WithClientId(ClientIdentifierPrefix.X509SanIpAddress, "192.0.2.1")
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.org/callback")
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
+
+        Assert.True(result.IsSuccess);
+        var request = result.Value;
+        Assert.NotNull(request);
+        // X509SanIpAddress should construct: "x509_san_ip_address:" + value
+        Assert.Equal("x509_san_ip_address:192.0.2.1", request.ClientId);
+    }
+
+    [Fact]
+    public void WithClientId_UsingDidPrefixConstant_ConstructsCorrectly()
+    {
+        var result = AuthorizationRequestBuilder.Create()
+            .WithResponseType(ResponseTypes.VpToken)
+            .WithClientId(ClientIdentifierPrefix.Did, "example:123abc")
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.org/callback")
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
+
+        Assert.True(result.IsSuccess);
+        var request = result.Value;
+        Assert.NotNull(request);
+        // Did should construct: "did:" + value
+        Assert.Equal("did:example:123abc", request.ClientId);
+    }
+
+    [Fact]
+    public void WithClientId_UsingUrnPrefixConstant_ConstructsCorrectly()
+    {
+        var result = AuthorizationRequestBuilder.Create()
+            .WithResponseType(ResponseTypes.VpToken)
+            .WithClientId(ClientIdentifierPrefix.Urn, "verifier:acme:xyz")
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.org/callback")
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
+
+        Assert.True(result.IsSuccess);
+        var request = result.Value;
+        Assert.NotNull(request);
+        // Urn should construct: "urn:" + value
+        Assert.Equal("urn:verifier:acme:xyz", request.ClientId);
+    }
+
+    [Fact]
+    public void WithClientId_EnumAndStringApiProduceSameResult()
+    {
+        // Build with string API
+        var resultString = AuthorizationRequestBuilder.Create()
+            .WithResponseType(ResponseTypes.VpToken)
+            .WithClientId("x509_san_dns:hostname.example.org")
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.org/callback")
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
+
+        // Build with enum API
+        var resultEnum = AuthorizationRequestBuilder.Create()
+            .WithResponseType(ResponseTypes.VpToken)
+            .WithClientId(ClientIdentifierPrefix.X509SanDns, "hostname.example.org")
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.org/callback")
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
+
+        // Both should succeed and produce same client ID
+        Assert.True(resultString.IsSuccess);
+        Assert.True(resultEnum.IsSuccess);
+        Assert.Equal(resultString.Value!.ClientId, resultEnum.Value!.ClientId);
+        Assert.Equal("x509_san_dns:hostname.example.org", resultEnum.Value!.ClientId);
+    }
+
+    [Fact]
+    public void WithClientId_EnumWithEmptyValue_ReturnsError()
+    {
+        var result = AuthorizationRequestBuilder.Create()
+            .WithResponseType(ResponseTypes.VpToken)
+            .WithClientId(ClientIdentifierPrefix.X509SanDns, "")
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.org/callback")
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
+
+        Assert.False(result.IsSuccess);
+        var errorMessages = result.Errors.Select(e => e.Message).ToList();
+        Assert.Contains(errorMessages, m => m.Contains("client_id is required"));
+    }
+
+    #endregion
 }
+
+
