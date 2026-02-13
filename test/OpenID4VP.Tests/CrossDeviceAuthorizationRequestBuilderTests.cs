@@ -47,11 +47,12 @@ public class CrossDeviceAuthorizationRequestBuilderTests
     {
         // Cross-device: Only client_id and request_uri required
         // NO response_type, nonce, dcql_query allowed!
-        var request = AuthorizationRequestBuilder.Create()
-            .WithClientId("verifier-1")
-            .WithRequestUri("https://verifier.example.com/request")
-            .WithResponseMode(responseMode)
-            .Build();
+        var request = CrossDeviceAuthorizationRequest.Build(builder =>
+            builder
+                .WithClientId("verifier-1")
+                .WithRequestUri("https://verifier.example.com/request")
+                .WithResponseMode(responseMode)
+        );
 
         Assert.NotNull(request);
         Assert.Equal("verifier-1", request.ClientId);
@@ -75,23 +76,18 @@ public class CrossDeviceAuthorizationRequestBuilderTests
     [Theory]
     [InlineData(ResponseModes.DirectPost)]
     [InlineData(ResponseModes.DirectPostJwt)]
-    public void Build_CrossDevice_MissingRequestUri_Succeeds_ButValidatorFails(string responseMode)
+    public void Build_CrossDevice_MissingRequestUri_Throws(string responseMode)
     {
-        var builder = AuthorizationRequestBuilder.Create()
-            .WithClientId("verifier-1")
-            .WithResponseMode(responseMode);
-            // Note: NOT setting request_uri
+        var ex = Assert.Throws<ValidationException>(() =>
+            CrossDeviceAuthorizationRequest.Build(builder =>
+                builder
+                    .WithClientId("verifier-1")
+                    .WithResponseMode(responseMode)
+                    // Note: NOT setting request_uri
+            )
+        );
 
-        // Build() succeeds (permissive)
-        var request = builder.Build();
-        Assert.NotNull(request);
-        Assert.Null(request.RequestUri);
-
-        // But the validator should fail for cross-device mode
-        var validator = new CrossDeviceAuthorizationRequestValidator();
-        var result = validator.Validate(request);
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.StartsWith("request_uri is REQUIRED for cross-device mode"));
+        Assert.Contains("request_uri is REQUIRED for cross-device mode", ex.Message);
     }
 
     [Theory]
@@ -100,21 +96,17 @@ public class CrossDeviceAuthorizationRequestBuilderTests
     public void Build_CrossDevice_WithResponseType_Throws(string responseMode)
     {
         // response_type FORBIDDEN in minimal cross-device request
-        var builder = AuthorizationRequestBuilder.Create()
-            .WithResponseType(ResponseTypes.VpToken)  // FORBIDDEN!
-            .WithClientId("verifier-1")
-            .WithRequestUri("https://verifier.example.com/request")
-            .WithResponseMode(responseMode);
+        var ex = Assert.Throws<ValidationException>(() =>
+            CrossDeviceAuthorizationRequest.Build(builder =>
+                builder
+                    .WithResponseType(ResponseTypes.VpToken)  // FORBIDDEN!
+                    .WithClientId("verifier-1")
+                    .WithRequestUri("https://verifier.example.com/request")
+                    .WithResponseMode(responseMode)
+            )
+        );
 
-        // Build() succeeds (permissive)
-        var request = builder.Build();
-        Assert.NotNull(request);
-
-        // But the validator should fail for cross-device mode
-        var validator = new CrossDeviceAuthorizationRequestValidator();
-        var result = validator.Validate(request);
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.Contains("response_type MUST NOT be set in cross-device mode"));
+        Assert.Contains("response_type MUST NOT be set in cross-device mode", ex.Message);
     }
 
     [Theory]
@@ -123,21 +115,17 @@ public class CrossDeviceAuthorizationRequestBuilderTests
     public void Build_CrossDevice_WithNonce_Throws(string responseMode)
     {
         // nonce FORBIDDEN in minimal cross-device request
-        var builder = AuthorizationRequestBuilder.Create()
-            .WithNonce("nonce-123")  // FORBIDDEN!
-            .WithClientId("verifier-1")
-            .WithRequestUri("https://verifier.example.com/request")
-            .WithResponseMode(responseMode);
+        var ex = Assert.Throws<ValidationException>(() =>
+            CrossDeviceAuthorizationRequest.Build(builder =>
+                builder
+                    .WithNonce("nonce-123")  // FORBIDDEN!
+                    .WithClientId("verifier-1")
+                    .WithRequestUri("https://verifier.example.com/request")
+                    .WithResponseMode(responseMode)
+            )
+        );
 
-        // Build() succeeds (permissive)
-        var request = builder.Build();
-        Assert.NotNull(request);
-
-        // But the validator should fail for cross-device mode
-        var validator = new CrossDeviceAuthorizationRequestValidator();
-        var result = validator.Validate(request);
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.Contains("nonce MUST NOT be set in cross-device mode"));
+        Assert.Contains("nonce MUST NOT be set in cross-device mode", ex.Message);
     }
 
     [Theory]
@@ -146,21 +134,17 @@ public class CrossDeviceAuthorizationRequestBuilderTests
     public void Build_CrossDevice_WithDcql_Throws(string responseMode)
     {
         // dcql_query FORBIDDEN in minimal cross-device request
-        var builder = AuthorizationRequestBuilder.Create()
-            .WithClientId("verifier-1")
-            .WithRequestUri("https://verifier.example.com/request")
-            .WithResponseMode(responseMode)
-            .WithDcql(dcql => dcql.AddW3cVcCredential("cred-1", b => b.AddTypeValues("UniversityDegree")));  // FORBIDDEN!
+        var ex = Assert.Throws<ValidationException>(() =>
+            CrossDeviceAuthorizationRequest.Build(builder =>
+                builder
+                    .WithClientId("verifier-1")
+                    .WithRequestUri("https://verifier.example.com/request")
+                    .WithResponseMode(responseMode)
+                    .WithDcql(dcql => dcql.AddW3cVcCredential("cred-1", b => b.AddTypeValues("UniversityDegree")))  // FORBIDDEN!
+            )
+        );
 
-        // Build() succeeds (permissive)
-        var request = builder.Build();
-        Assert.NotNull(request);
-
-        // But the validator should fail for cross-device mode
-        var validator = new CrossDeviceAuthorizationRequestValidator();
-        var result = validator.Validate(request);
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.Contains("dcql_query MUST NOT be set in cross-device mode"));
+        Assert.Contains("dcql_query MUST NOT be set in cross-device mode", ex.Message);
     }
 
     [Theory]
@@ -169,21 +153,17 @@ public class CrossDeviceAuthorizationRequestBuilderTests
     public void Build_CrossDevice_WithRedirectUri_Throws(string responseMode)
     {
         // redirect_uri FORBIDDEN in cross-device
-        var builder = AuthorizationRequestBuilder.Create()
-            .WithClientId("verifier-1")
-            .WithRequestUri("https://verifier.example.com/request")
-            .WithResponseMode(responseMode)
-            .WithRedirectUri("https://verifier.example.com/callback");  // FORBIDDEN!
+        var ex = Assert.Throws<ValidationException>(() =>
+            CrossDeviceAuthorizationRequest.Build(builder =>
+                builder
+                    .WithClientId("verifier-1")
+                    .WithRequestUri("https://verifier.example.com/request")
+                    .WithResponseMode(responseMode)
+                    .WithRedirectUri("https://verifier.example.com/callback")  // FORBIDDEN!
+            )
+        );
 
-        // Build() succeeds (permissive)
-        var request = builder.Build();
-        Assert.NotNull(request);
-
-        // But the validator should fail for cross-device mode
-        var validator = new CrossDeviceAuthorizationRequestValidator();
-        var result = validator.Validate(request);
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.Contains("redirect_uri MUST NOT be set in cross-device mode"));
+        Assert.Contains("redirect_uri MUST NOT be set in cross-device mode", ex.Message);
     }
 
     [Theory]
@@ -192,12 +172,13 @@ public class CrossDeviceAuthorizationRequestBuilderTests
     public void Build_CrossDevice_WithState_Succeeds(string responseMode)
     {
         // state is optional in cross-device
-        var request = AuthorizationRequestBuilder.Create()
-            .WithClientId("verifier-1")
-            .WithRequestUri("https://verifier.example.com/request")
-            .WithResponseMode(responseMode)
-            .WithState("state-456")
-            .Build();
+        var request = CrossDeviceAuthorizationRequest.Build(builder =>
+            builder
+                .WithClientId("verifier-1")
+                .WithRequestUri("https://verifier.example.com/request")
+                .WithResponseMode(responseMode)
+                .WithState("state-456")
+        );
 
         Assert.NotNull(request);
         Assert.Equal("state-456", request.State);

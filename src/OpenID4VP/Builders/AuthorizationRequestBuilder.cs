@@ -228,9 +228,9 @@ public sealed class AuthorizationRequestBuilder
         // Return the request - let scenario-specific validators check if it's suitable for the intended use
         return new AuthorizationRequest
         {
-            ResponseType = _responseType ?? "vp_token",
+            ResponseType = _responseType,
             ClientId = _clientId!,
-            Nonce = _nonce ?? "nonce",
+            Nonce = _nonce,
             ResponseMode = _responseMode!,
             DcqlQuery = dcqlQuery,
             RedirectUri = _redirectUri,

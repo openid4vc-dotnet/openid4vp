@@ -39,13 +39,13 @@ namespace OpenID4VP.Validators
             }
 
             // Check response_type (REQUIRED)
-            if (string.IsNullOrEmpty(request.ResponseType) || request.ResponseType == "vp_token")
+            if (string.IsNullOrEmpty(request.ResponseType) || request.ResponseType != "vp_token")
             {
-                errors.Add("response_type is REQUIRED for same-device mode");
+                errors.Add("response_type is REQUIRED and must be 'vp_token' for same-device mode");
             }
 
             // Check nonce (REQUIRED)
-            if (string.IsNullOrEmpty(request.Nonce) || request.Nonce == "nonce")
+            if (string.IsNullOrEmpty(request.Nonce))
             {
                 errors.Add("nonce is REQUIRED for same-device mode");
             }

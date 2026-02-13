@@ -27,23 +27,15 @@ namespace OpenID4VP.Validators
             var errors = new List<string>();
 
             // Check required: response_type
-            if (string.IsNullOrEmpty(request.ResponseType) || request.ResponseType == "vp_token")
+            if (string.IsNullOrEmpty(request.ResponseType) || request.ResponseType != "vp_token")
             {
-                // "vp_token" is the default - should be explicitly set
-                if (request.ResponseType != "vp_token")
-                {
-                    errors.Add("response_type is REQUIRED for Request Object");
-                }
+                errors.Add("response_type is REQUIRED and must be 'vp_token' for Request Object");
             }
 
             // Check required: nonce
-            if (string.IsNullOrEmpty(request.Nonce) || request.Nonce == "nonce")
+            if (string.IsNullOrEmpty(request.Nonce))
             {
-                // "nonce" is the default placeholder - should be explicitly set
-                if (request.Nonce != "nonce")
-                {
-                    errors.Add("nonce is REQUIRED for Request Object");
-                }
+                errors.Add("nonce is REQUIRED for Request Object");
             }
 
             // Check required: dcql_query OR scope (at least one, not both)

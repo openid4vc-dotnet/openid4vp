@@ -49,6 +49,7 @@ namespace OpenID4VP.Validators
             }
 
             // Check forbidden: response_type
+            // response_type should NOT be set in minimal cross-device request (should be null)
             if (!string.IsNullOrEmpty(request.ResponseType))
             {
                 errors.Add("response_type MUST NOT be set in cross-device mode minimal request. " +
@@ -56,6 +57,7 @@ namespace OpenID4VP.Validators
             }
 
             // Check forbidden: nonce
+            // Nonce should NOT be set in minimal cross-device request (will be null if not explicitly set)
             if (!string.IsNullOrEmpty(request.Nonce))
             {
                 errors.Add("nonce MUST NOT be set in cross-device mode minimal request. " +

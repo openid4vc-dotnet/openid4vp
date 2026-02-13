@@ -52,10 +52,10 @@ public class AuthorizationRequestBuilderTests
             .WithRedirectUri("https://verifier.example.com/callback")
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)));
 
-        // Build() uses default
+        // Build() succeeds (permissive) - ResponseType is NOT defaulted
         var request = builder.Build();
         Assert.NotNull(request);
-        Assert.Equal("vp_token", request.ResponseType);  // Default value
+        Assert.Null(request.ResponseType);  // NO default value anymore
     }
 
     [Fact]
@@ -82,10 +82,10 @@ public class AuthorizationRequestBuilderTests
             .WithRedirectUri("https://verifier.example.com/callback")
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)));
 
-        // Build() succeeds (permissive) - uses default nonce
+        // Build() succeeds (permissive) - Nonce is NOT defaulted
         var request = builder.Build();
         Assert.NotNull(request);
-        Assert.Equal("nonce", request.Nonce);  // Default value
+        Assert.Null(request.Nonce);  // NO default value anymore
     }
 
     [Fact]
