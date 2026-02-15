@@ -1,6 +1,4 @@
-using OpenID4VP.Common;
 using OpenID4VP.Dcql.Query.Builders;
-using OpenID4VP.Dcql.Query.Models;
 using OpenID4VP.Models;
 using OpenID4VC.Core.Results;
 

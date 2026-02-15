@@ -23,6 +23,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\src\OpenID4VP\OpenID4VP.csproj" />
+		<ProjectReference Include="..\OpenID4VC.Core.Tests\OpenID4VC.Core.Tests.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

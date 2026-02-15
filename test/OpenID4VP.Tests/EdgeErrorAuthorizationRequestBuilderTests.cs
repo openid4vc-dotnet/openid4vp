@@ -1,4 +1,5 @@
 using OpenID4VP.Builders;
+using OpenID4VC.Core.Tests;
 
 namespace OpenID4VP.Tests.Builders;
 
@@ -22,13 +23,13 @@ public class EdgeErrorAuthorizationRequestBuilderTests
     {
         var builder = AuthorizationRequestBuilder.Create()
             .WithClientId("https://verifier.example.com")
+            .WithNonce("test-nonce")
             .WithResponseMode("invalid-mode");
 
         // Build() succeeds (permissive) - doesn't validate response_mode value
-        var result = builder.Build();
-        Assert.True(result.IsSuccess);
-        Assert.NotNull(result.Value);
-        Assert.Equal("invalid-mode", result.Value.ResponseMode);
+        var request = builder.Build().AssertSuccess();
+        Assert.NotNull(request);
+        Assert.Equal("invalid-mode", request.ResponseMode);
     }
 
     [Fact]
@@ -36,11 +37,12 @@ public class EdgeErrorAuthorizationRequestBuilderTests
     {
         var result = AuthorizationRequestBuilder.Create()
             .WithClientId("https://verifier.example.com")
+            .WithNonce("test-nonce")
             .Build();
 
-        Assert.False(result.IsSuccess);
-        Assert.Single(result.Errors);
-        Assert.Contains("response_mode is required", result.Errors[0].Message);
+        var errors = result.AssertError();
+        Assert.Single(errors);
+        Assert.Contains("response_mode is required", errors[0].Message);
     }
 }
 

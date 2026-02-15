@@ -1,5 +1,4 @@
 using OpenID4VP.Dcql.Query.Models;
-using System.Text.Encodings.Web;
 using System.Text.Json;
 
 namespace OpenID4VP.Dcql.Query.Serialization;

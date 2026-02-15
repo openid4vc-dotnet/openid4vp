@@ -1,4 +1,3 @@
-using OpenID4VP.Common;
 using OpenID4VP.Models;
 using OpenID4VP.Validators;
 using OpenID4VC.Core.Results;

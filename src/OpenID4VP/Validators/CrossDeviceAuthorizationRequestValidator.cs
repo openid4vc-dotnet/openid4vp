@@ -4,21 +4,23 @@ using OpenID4VP.Models;
 namespace OpenID4VP.Validators
 {
     /// <summary>
-    /// Validator for cross-device mode minimal authorization requests (Section 3.2 of OpenID4VP spec).
+    /// Validator for cross-device mode authorization requests (Section 3.2 of OpenID4VP spec).
     /// 
-    /// Cross-device minimal request requirements:
-    /// - ONLY contains: client_id, request_uri, and optionally state
-    /// - response_mode can be "direct_post" or "direct_post.jwt" (but not required in minimal request)
-    /// - response_type MUST NOT be set
-    /// - nonce MUST NOT be set
-    /// - dcql_query MUST NOT be set
-    /// - scope MUST NOT be set
-    /// - redirect_uri MUST NOT be set
-    /// - response_uri MUST NOT be set
+    /// Note: The cross-device flow involves TWO separate requests:
+    /// 1. Minimal reference in QR code: client_id + request_uri only
+    /// 2. Full AuthorizationRequest fetched from request_uri: includes nonce, response_type, etc.
     /// 
-    /// Per spec: "In order to keep the size of the QR Code small and be able to sign and optionally 
-    /// encrypt the Request Object, the actual Authorization Request contains only the Client Identifier 
-    /// and Request URI"
+    /// This validator validates the AuthorizationRequest object representing the FULL request
+    /// fetched from the request_uri endpoint (not the minimal QR code reference).
+    /// 
+    /// Cross-device AuthorizationRequest requirements:
+    /// - MUST have: client_id, request_uri, response_mode
+    /// - nonce is REQUIRED (per spec: "nonce: REQUIRED... for every Authorization Request")
+    /// - response_type MUST NOT be set in minimal request, but required in RequestObject
+    /// - dcql_query MUST NOT be set in minimal request
+    /// - scope MUST NOT be set in minimal request
+    /// - redirect_uri MUST NOT be set (cross-device uses response_uri)
+    /// - response_uri MUST NOT be set in minimal request
     /// </summary>
     public sealed class CrossDeviceAuthorizationRequestValidator : IValidator<AuthorizationRequest>
     {
@@ -32,11 +34,18 @@ namespace OpenID4VP.Validators
                 errors.Add("client_id is REQUIRED");
             }
 
-            // Check required: request_uri (for cross-device minimal request)
+            // Check required: request_uri (for cross-device mode)
             if (string.IsNullOrEmpty(request.RequestUri))
             {
                 errors.Add("request_uri is REQUIRED for cross-device mode. " +
                           "It points to the endpoint where the wallet fetches the full RequestObject");
+            }
+
+            // Check required: nonce (REQUIRED per OpenID4VP spec Section 5.2)
+            if (string.IsNullOrEmpty(request.Nonce))
+            {
+                errors.Add("nonce is REQUIRED for cross-device mode. " +
+                          "Per spec: 'nonce: REQUIRED... for every Authorization Request'");
             }
 
             // Check response_mode (if set, should be direct_post or direct_post.jwt)
@@ -49,18 +58,10 @@ namespace OpenID4VP.Validators
             }
 
             // Check forbidden: response_type
-            // response_type should NOT be set in minimal cross-device request (should be null)
+            // response_type should NOT be set in cross-device mode (it's in the RequestObject, not the minimal request)
             if (!string.IsNullOrEmpty(request.ResponseType))
             {
                 errors.Add("response_type MUST NOT be set in cross-device mode minimal request. " +
-                          "Include it in the RequestObject on the request_uri endpoint instead");
-            }
-
-            // Check forbidden: nonce
-            // Nonce should NOT be set in minimal cross-device request (will be null if not explicitly set)
-            if (!string.IsNullOrEmpty(request.Nonce))
-            {
-                errors.Add("nonce MUST NOT be set in cross-device mode minimal request. " +
                           "Include it in the RequestObject on the request_uri endpoint instead");
             }
 

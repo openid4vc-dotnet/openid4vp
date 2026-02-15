@@ -1,5 +1,4 @@
 using System.Text.Json;
-using OpenID4VP.Models;
 using OpenID4VP.Parsers;
 
 namespace OpenID4VP.Tests.Parsers;

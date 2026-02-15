@@ -1,8 +1,8 @@
 using OpenID4VP.Builders;
 using OpenID4VP.Common;
-using OpenID4VP.Models;
 using OpenID4VP.Dcql.Query.Builders;
 using OpenID4VC.Core.Results;
+using OpenID4VC.Core.Tests;
 
 namespace OpenID4VP.Tests.Builders;
 
@@ -35,8 +35,7 @@ public class AuthorizationRequestBuilderTests
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
 
-        Assert.True(result.IsSuccess);
-        var request = result.Value;
+        var request = result.AssertSuccess();
         Assert.NotNull(request);
         Assert.Equal(ResponseTypes.VpToken, request.ResponseType);
         Assert.Equal("https://verifier.example.com", request.ClientId);
@@ -57,8 +56,7 @@ public class AuthorizationRequestBuilderTests
             .Build();
 
         // Build() succeeds (permissive) - ResponseType is NOT defaulted
-        Assert.True(result.IsSuccess);
-        var request = result.Value;
+        var request = result.AssertSuccess();
         Assert.NotNull(request);
         Assert.Null(request.ResponseType);  // NO default value anymore
     }
@@ -74,10 +72,10 @@ public class AuthorizationRequestBuilderTests
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
 
-        Assert.False(result.IsSuccess);
-        Assert.Single(result.Errors);
-        Assert.IsType<ValidationError>(result.Errors[0]);
-        Assert.Contains("client_id is required", result.Errors[0].Message, StringComparison.OrdinalIgnoreCase);
+        var errors = result.AssertError();
+        Assert.Single(errors);
+        Assert.IsType<ValidationError>(errors[0]);
+        Assert.Contains("client_id is required", errors[0].Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -91,11 +89,10 @@ public class AuthorizationRequestBuilderTests
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
 
-        // Build() succeeds (permissive) - Nonce is NOT defaulted
-        Assert.True(result.IsSuccess);
-        var request = result.Value;
+        // Builder allows building without nonce - scenario-specific validators enforce requirements
+        var request = result.AssertSuccess();
         Assert.NotNull(request);
-        Assert.Null(request.Nonce);  // NO default value anymore
+        Assert.Null(request.Nonce);
     }
 
     [Fact]
@@ -109,10 +106,10 @@ public class AuthorizationRequestBuilderTests
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
 
-        Assert.False(result.IsSuccess);
-        Assert.Single(result.Errors);
-        Assert.IsType<ValidationError>(result.Errors[0]);
-        Assert.Contains("response_mode is required", result.Errors[0].Message);
+        var errors = result.AssertError();
+        Assert.Single(errors);
+        Assert.IsType<ValidationError>(errors[0]);
+        Assert.Contains("response_mode is required", errors[0].Message);
     }
 
     [Fact]
@@ -127,8 +124,7 @@ public class AuthorizationRequestBuilderTests
             .Build();
 
         // Build() succeeds (permissive) - doesn't validate dcql/scope combo
-        Assert.True(result.IsSuccess);
-        var request = result.Value;
+        var request = result.AssertSuccess();
         Assert.NotNull(request);
         Assert.Null(request.DcqlQuery);
         Assert.Null(request.Scope);
@@ -147,9 +143,9 @@ public class AuthorizationRequestBuilderTests
             .WithDcql(dcql => dcql.AddMdocCredential("mdoc-1", b => { }))
             .Build();
         
-        Assert.False(result.IsSuccess);
-        Assert.Single(result.Errors);
-        Assert.Contains("DCQL query can only be configured once", result.Errors[0].Message);
+        var errors = result.AssertError();
+        Assert.Single(errors);
+        Assert.Contains("DCQL query can only be configured once", errors[0].Message);
     }
 
     [Fact]
@@ -162,9 +158,9 @@ public class AuthorizationRequestBuilderTests
             .WithResponseMode(ResponseModes.Fragment)
             .Build();
         
-        Assert.False(result.IsSuccess);
-        Assert.Single(result.Errors);
-        Assert.Contains("response_type is required", result.Errors[0].Message);
+        var errors = result.AssertError();
+        Assert.Single(errors);
+        Assert.Contains("response_type is required", errors[0].Message);
     }
 
     [Fact]
@@ -176,9 +172,9 @@ public class AuthorizationRequestBuilderTests
             .WithResponseMode(ResponseModes.Fragment)
             .Build();
         
-        Assert.False(result.IsSuccess);
-        Assert.Single(result.Errors);
-        Assert.Contains("client_id is required", result.Errors[0].Message);
+        var errors = result.AssertError();
+        Assert.Single(errors);
+        Assert.Contains("client_id is required", errors[0].Message);
     }
 
     [Fact]
@@ -190,9 +186,9 @@ public class AuthorizationRequestBuilderTests
             .WithResponseMode(ResponseModes.Fragment)
             .Build();
         
-        Assert.False(result.IsSuccess);
-        Assert.Single(result.Errors);
-        Assert.Contains("nonce is required", result.Errors[0].Message);
+        var errors = result.AssertError();
+        Assert.Single(errors);
+        Assert.Contains("nonce is required", errors[0].Message);
     }
 
     [Fact]
@@ -203,9 +199,9 @@ public class AuthorizationRequestBuilderTests
             .WithResponseMode("")
             .Build();
         
-        Assert.False(result.IsSuccess);
-        Assert.Single(result.Errors);
-        Assert.Contains("response_mode is required", result.Errors[0].Message);
+        var errors = result.AssertError();
+        Assert.Single(errors);
+        Assert.Contains("response_mode is required", errors[0].Message);
     }
 
     [Fact]
@@ -217,9 +213,9 @@ public class AuthorizationRequestBuilderTests
             .WithDcql(null!)
             .Build();
         
-        Assert.False(result.IsSuccess);
-        Assert.Single(result.Errors);
-        Assert.Contains("DCQL configure action cannot be null", result.Errors[0].Message);
+        var errors = result.AssertError();
+        Assert.Single(errors);
+        Assert.Contains("DCQL configure action cannot be null", errors[0].Message);
     }
 
     [Fact]
@@ -231,9 +227,9 @@ public class AuthorizationRequestBuilderTests
             .AddVerifierAttestation(null!)
             .Build();
         
-        Assert.False(result.IsSuccess);
-        Assert.Single(result.Errors);
-        Assert.Contains("Verifier attestation cannot be null", result.Errors[0].Message);
+        var errors = result.AssertError();
+        Assert.Single(errors);
+        Assert.Contains("Verifier attestation cannot be null", errors[0].Message);
     }
 
     [Fact]
@@ -257,8 +253,7 @@ public class AuthorizationRequestBuilderTests
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
 
-        Assert.True(result.IsSuccess);
-        var request = result.Value;
+        var request = result.AssertSuccess();
         Assert.Equal("https://verifier.example.com/callback", request.RedirectUri);
         Assert.Equal("state-value", request.State);
         Assert.Equal("post", request.RequestUriMethod);
@@ -281,8 +276,7 @@ public class AuthorizationRequestBuilderTests
             .WithScope("com.example.credential_presentation")
             .Build();
 
-        Assert.True(result.IsSuccess);
-        var request = result.Value;
+        var request = result.AssertSuccess();
         Assert.Equal("com.example.credential_presentation", request.Scope);
     }
 
@@ -300,8 +294,7 @@ public class AuthorizationRequestBuilderTests
             .Build();
 
         // Build() succeeds (permissive)
-        Assert.True(result.IsSuccess);
-        var request = result.Value;
+        var request = result.AssertSuccess();
         Assert.NotNull(request.DcqlQuery);
         Assert.Equal("com.example.credential_presentation", request.Scope);
     }
@@ -321,7 +314,7 @@ public class AuthorizationRequestBuilderTests
 
         Assert.NotNull(builder);
         var result = builder.Build();
-        Assert.True(result.IsSuccess);
+        result.AssertSuccess(); // assert returns value
     }
 
     [Fact]
@@ -335,10 +328,10 @@ public class AuthorizationRequestBuilderTests
             .AddVerifierAttestation(null!)  // Error: Attestation cannot be null
             .Build();
 
-        Assert.False(result.IsSuccess);
-        Assert.Equal(5, result.Errors.Count);
+        var errors = result.AssertError();
+        Assert.Equal(5, errors.Length);
         
-        var messages = result.Errors.Select(e => e.Message).ToList();
+        var messages = errors.Select(e => e.Message).ToList();
         Assert.Contains("client_id is required", messages);
         Assert.Contains("nonce is required", messages);
         Assert.Contains("response_mode is required", messages);
@@ -367,8 +360,7 @@ public class AuthorizationRequestBuilderTests
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
 
-        Assert.True(result.IsSuccess);
-        var request = result.Value;
+        var request = result.AssertSuccess();
         Assert.NotNull(request);
         Assert.Equal(validClientId, request.ClientId);
     }
@@ -393,8 +385,8 @@ public class AuthorizationRequestBuilderTests
             .Build();
 
         // Without validation, any non-empty string is accepted
-        Assert.True(result.IsSuccess);
-        Assert.Equal(clientId, result.Value!.ClientId);
+        var request = result.AssertSuccess();
+        Assert.Equal(clientId, request.ClientId);
     }
 
     [Fact]
@@ -409,8 +401,8 @@ public class AuthorizationRequestBuilderTests
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
 
-        Assert.False(result.IsSuccess);
-        var errorMessages = result.Errors.Select(e => e.Message).ToList();
+        var errors = result.AssertError();
+        var errorMessages = errors.Select(e => e.Message).ToList();
         Assert.Contains(errorMessages, m => m.Contains("client_id is required"));
     }
 
@@ -426,8 +418,8 @@ public class AuthorizationRequestBuilderTests
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
 
-        Assert.False(result.IsSuccess);
-        var errorMessages = result.Errors.Select(e => e.Message).ToList();
+        var errors = result.AssertError();
+        var errorMessages = errors.Select(e => e.Message).ToList();
         Assert.Contains(errorMessages, m => m.Contains("client_id is required"));
     }
 
@@ -445,7 +437,7 @@ public class AuthorizationRequestBuilderTests
 
         // Note: This is valid technically (empty value after prefix), but may fail in semantic validation later
         // For now, prefix validation should pass, and semantic validation would be elsewhere
-        Assert.True(result.IsSuccess);  // Prefix is valid, value validation is not our concern here
+        result.AssertSuccess(); // assert returns value
     }
 
     [Fact]
@@ -462,8 +454,8 @@ public class AuthorizationRequestBuilderTests
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
 
-        Assert.True(result.IsSuccess);
-        Assert.Equal("https:verifier.example.org", result.Value!.ClientId);
+        var request = result.AssertSuccess();
+        Assert.Equal("https:verifier.example.org", request.ClientId);
     }
 
     [Fact]
@@ -478,8 +470,7 @@ public class AuthorizationRequestBuilderTests
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
 
-        Assert.True(result.IsSuccess);
-        var request = result.Value;
+        var request = result.AssertSuccess();
         Assert.NotNull(request);
         Assert.Equal("redirect_uri:https://client.example.org/callback", request.ClientId);
     }
@@ -496,8 +487,7 @@ public class AuthorizationRequestBuilderTests
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
 
-        Assert.True(result.IsSuccess);
-        var request = result.Value;
+        var request = result.AssertSuccess();
         Assert.NotNull(request);
         Assert.Equal("x509_san_uri:https://client.example.org", request.ClientId);
     }
@@ -514,8 +504,7 @@ public class AuthorizationRequestBuilderTests
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
 
-        Assert.True(result.IsSuccess);
-        var request = result.Value;
+        var request = result.AssertSuccess();
         Assert.NotNull(request);
         Assert.Equal("x509_san_ip_address:192.0.2.1", request.ClientId);
     }
@@ -532,8 +521,7 @@ public class AuthorizationRequestBuilderTests
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
 
-        Assert.True(result.IsSuccess);
-        var request = result.Value;
+        var request = result.AssertSuccess();
         Assert.NotNull(request);
         Assert.Equal("did:example:123abc", request.ClientId);
     }
@@ -550,8 +538,7 @@ public class AuthorizationRequestBuilderTests
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
 
-        Assert.True(result.IsSuccess);
-        var request = result.Value;
+        var request = result.AssertSuccess();
         Assert.NotNull(request);
         Assert.Equal("urn:verifier:acme:xyz", request.ClientId);
     }
@@ -572,8 +559,7 @@ public class AuthorizationRequestBuilderTests
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
 
-        Assert.True(result.IsSuccess);
-        var request = result.Value;
+        var request = result.AssertSuccess();
         Assert.NotNull(request);
         // X509SanDns should construct: "x509_san_dns:" + value
         Assert.Equal("x509_san_dns:client.example.org", request.ClientId);
@@ -591,8 +577,7 @@ public class AuthorizationRequestBuilderTests
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
 
-        Assert.True(result.IsSuccess);
-        var request = result.Value;
+        var request = result.AssertSuccess();
         Assert.NotNull(request);
         // RedirectUri should construct: "redirect_uri:" + value
         Assert.Equal("redirect_uri:https://verifier.example.org/callback", request.ClientId);
@@ -610,8 +595,7 @@ public class AuthorizationRequestBuilderTests
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
 
-        Assert.True(result.IsSuccess);
-        var request = result.Value;
+        var request = result.AssertSuccess();
         Assert.NotNull(request);
         // X509SanUri should construct: "x509_san_uri:" + value
         Assert.Equal("x509_san_uri:https://example.org", request.ClientId);
@@ -629,8 +613,7 @@ public class AuthorizationRequestBuilderTests
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
 
-        Assert.True(result.IsSuccess);
-        var request = result.Value;
+        var request = result.AssertSuccess();
         Assert.NotNull(request);
         // X509SanIpAddress should construct: "x509_san_ip_address:" + value
         Assert.Equal("x509_san_ip_address:192.0.2.1", request.ClientId);
@@ -648,8 +631,7 @@ public class AuthorizationRequestBuilderTests
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
 
-        Assert.True(result.IsSuccess);
-        var request = result.Value;
+        var request = result.AssertSuccess();
         Assert.NotNull(request);
         // Did should construct: "did:" + value
         Assert.Equal("did:example:123abc", request.ClientId);
@@ -667,8 +649,7 @@ public class AuthorizationRequestBuilderTests
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
 
-        Assert.True(result.IsSuccess);
-        var request = result.Value;
+        var request = result.AssertSuccess();
         Assert.NotNull(request);
         // Urn should construct: "urn:" + value
         Assert.Equal("urn:verifier:acme:xyz", request.ClientId);
@@ -698,10 +679,10 @@ public class AuthorizationRequestBuilderTests
             .Build();
 
         // Both should succeed and produce same client ID
-        Assert.True(resultString.IsSuccess);
-        Assert.True(resultEnum.IsSuccess);
-        Assert.Equal(resultString.Value!.ClientId, resultEnum.Value!.ClientId);
-        Assert.Equal("x509_san_dns:hostname.example.org", resultEnum.Value!.ClientId);
+        var requestString = resultString.AssertSuccess();
+        var requestEnum = resultEnum.AssertSuccess();
+        Assert.Equal(requestString.ClientId, requestEnum.ClientId);
+        Assert.Equal("x509_san_dns:hostname.example.org", requestEnum.ClientId);
     }
 
     [Fact]
@@ -716,8 +697,8 @@ public class AuthorizationRequestBuilderTests
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
 
-        Assert.False(result.IsSuccess);
-        var errorMessages = result.Errors.Select(e => e.Message).ToList();
+        var errors = result.AssertError();
+        var errorMessages = errors.Select(e => e.Message).ToList();
         Assert.Contains(errorMessages, m => m.Contains("client_id is required"));
     }
 

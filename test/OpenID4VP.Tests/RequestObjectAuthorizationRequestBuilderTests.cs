@@ -1,8 +1,7 @@
 using OpenID4VP.Builders;
 using OpenID4VP.Common;
 using OpenID4VP.Dcql.Query.Builders;
-using OpenID4VP.Validators;
-using OpenID4VC.Core.Results;
+using OpenID4VC.Core.Tests;
 
 namespace OpenID4VP.Tests.Builders;
 
@@ -59,8 +58,7 @@ public class RequestObjectAuthorizationRequestBuilderTests
                 .WithDcql(dcql => dcql.AddW3cVcCredential("cred-1", b => ConfigureValidW3cCredential(b)))
         );
 
-        Assert.True(result.IsSuccess);
-        var request = result.Value;
+        var request = result.AssertSuccess();
         Assert.NotNull(request);
         Assert.Equal(ResponseTypes.VpToken, request.ResponseType);
         Assert.Equal("https://verifier.example.com", request.ClientId);
@@ -83,8 +81,7 @@ public class RequestObjectAuthorizationRequestBuilderTests
                 .WithScope("openid profile")
         );
 
-        Assert.True(result.IsSuccess);
-        var request = result.Value;
+        var request = result.AssertSuccess();
         Assert.NotNull(request);
         Assert.Equal(ResponseTypes.VpToken, request.ResponseType);
         Assert.Equal("https://verifier.example.com", request.ClientId);
@@ -106,8 +103,8 @@ public class RequestObjectAuthorizationRequestBuilderTests
                 .WithDcql(dcql => dcql.AddW3cVcCredential("cred-1", b => ConfigureValidW3cCredential(b)))
         );
 
-        Assert.False(result.IsSuccess);
-        Assert.Contains(result.Errors, e => e.Message.Contains("response_type is REQUIRED and must be 'vp_token' for Request Object"));
+        var errors = result.AssertError();
+        Assert.Contains(errors, e => e.Message.Contains("response_type is REQUIRED and must be 'vp_token' for Request Object"));
     }
 
     [Fact]
@@ -122,8 +119,8 @@ public class RequestObjectAuthorizationRequestBuilderTests
                 .WithDcql(dcql => dcql.AddW3cVcCredential("cred-1", b => ConfigureValidW3cCredential(b)))
         );
 
-        Assert.False(result.IsSuccess);
-        Assert.Contains(result.Errors, e => e.Message.Contains("nonce is REQUIRED for Request Object"));
+        var errors = result.AssertError();
+        Assert.Contains(errors, e => e.Message.Contains("nonce is REQUIRED for Request Object"));
     }
 
     [Fact]
@@ -139,8 +136,8 @@ public class RequestObjectAuthorizationRequestBuilderTests
                 // Note: NOT setting response_uri
         );
 
-        Assert.False(result.IsSuccess);
-        Assert.Contains(result.Errors, e => e.Message.Contains("response_uri is REQUIRED for Request Object"));
+        var errors = result.AssertError();
+        Assert.Contains(errors, e => e.Message.Contains("response_uri is REQUIRED for Request Object"));
     }
 
     [Fact]
@@ -156,8 +153,8 @@ public class RequestObjectAuthorizationRequestBuilderTests
                 // Note: NOT setting client_id - will fail during Build() due to required property
         );
 
-        Assert.False(result.IsSuccess);
-        Assert.Contains(result.Errors, e => e.Message.Contains("client_id"));
+        var errors = result.AssertError();
+        Assert.Contains(errors, e => e.Message.Contains("client_id"));
     }
 
     [Fact]
@@ -173,8 +170,8 @@ public class RequestObjectAuthorizationRequestBuilderTests
                 // Note: NOT setting dcql_query or scope
         );
 
-        Assert.False(result.IsSuccess);
-        Assert.Contains(result.Errors, e => e.Message.Contains("Either dcql_query or scope MUST be set for Request Object"));
+        var errors = result.AssertError();
+        Assert.Contains(errors, e => e.Message.Contains("Either dcql_query or scope MUST be set for Request Object"));
     }
 
     [Fact]
@@ -191,8 +188,8 @@ public class RequestObjectAuthorizationRequestBuilderTests
                 .WithScope("openid profile")  // Both dcql_query AND scope - forbidden!
         );
 
-        Assert.False(result.IsSuccess);
-        Assert.Contains(result.Errors, e => e.Message.Contains("Only one of dcql_query or scope can be set in Request Object, not both"));
+        var errors = result.AssertError();
+        Assert.Contains(errors, e => e.Message.Contains("Only one of dcql_query or scope can be set in Request Object, not both"));
     }
 
     [Fact]
@@ -210,8 +207,8 @@ public class RequestObjectAuthorizationRequestBuilderTests
                 .WithDcql(dcql => dcql.AddW3cVcCredential("cred-1", b => ConfigureValidW3cCredential(b)))
         );
 
-        Assert.False(result.IsSuccess);
-        Assert.Contains(result.Errors, e => e.Message.Contains("request_uri MUST NOT be set in Request Object"));
+        var errors = result.AssertError();
+        Assert.Contains(errors, e => e.Message.Contains("request_uri MUST NOT be set in Request Object"));
     }
 
     [Fact]
@@ -229,8 +226,8 @@ public class RequestObjectAuthorizationRequestBuilderTests
                 .WithDcql(dcql => dcql.AddW3cVcCredential("cred-1", b => ConfigureValidW3cCredential(b)))
         );
 
-        Assert.False(result.IsSuccess);
-        Assert.Contains(result.Errors, e => e.Message.Contains("redirect_uri MUST NOT be set in Request Object"));
+        var errors = result.AssertError();
+        Assert.Contains(errors, e => e.Message.Contains("redirect_uri MUST NOT be set in Request Object"));
     }
 
     [Fact]
@@ -248,9 +245,9 @@ public class RequestObjectAuthorizationRequestBuilderTests
                 .WithDcql(dcql => dcql.AddW3cVcCredential("cred-1", b => ConfigureValidW3cCredential(b)))
         );
 
-        Assert.True(result.IsSuccess);
-        Assert.NotNull(result.Value);
-        Assert.Equal("state-456", result.Value.State);
+        var request = result.AssertSuccess();
+        Assert.NotNull(request);
+        Assert.Equal("state-456", request.State);
     }
 
     [Fact]
@@ -267,8 +264,8 @@ public class RequestObjectAuthorizationRequestBuilderTests
                 .WithDcql(dcql => dcql.AddW3cVcCredential("cred-1", b => ConfigureValidW3cCredential(b)))
         );
 
-        Assert.True(result.IsSuccess);
-        Assert.NotNull(result.Value);
+        var request = result.AssertSuccess();
+        Assert.NotNull(request);
     }
 
     [Fact]
@@ -285,8 +282,8 @@ public class RequestObjectAuthorizationRequestBuilderTests
                 .WithDcql(dcql => dcql.AddW3cVcCredential("cred-1", b => ConfigureValidW3cCredential(b)))
         );
 
-        Assert.True(result.IsSuccess);
-        Assert.NotNull(result.Value);
-        Assert.NotNull(result.Value.DcqlQuery);
+        var request = result.AssertSuccess();
+        Assert.NotNull(request);
+        Assert.NotNull(request.DcqlQuery);
     }
 }

@@ -1,7 +1,6 @@
 using OpenID4VP.Builders;
 using OpenID4VP.Common;
-using OpenID4VP.Validators;
-using OpenID4VC.Core.Results;
+using OpenID4VC.Core.Tests;
 
 namespace OpenID4VP.Tests.Builders;
 
@@ -46,21 +45,18 @@ public class CrossDeviceAuthorizationRequestBuilderTests
     [InlineData(ResponseModes.DirectPostJwt)]
     public void Build_CrossDevice_WithOnlyRequiredFields_Succeeds(string responseMode)
     {
-        // Cross-device: Only client_id and request_uri required
-        // NO response_type, nonce, dcql_query allowed!
+        // Cross-device mode: client_id + request_uri + nonce (all REQUIRED per spec)
         var result = CrossDeviceAuthorizationRequest.Build(builder =>
             builder
                 .WithClientId("https://verifier.example.com")
+                .WithNonce("nonce-value")
                 .WithRequestUri("https://verifier.example.com/request")
                 .WithResponseMode(responseMode)
         );
 
-        Assert.True(result.IsSuccess);
-        var request = result.Value;
+        // Should SUCCEED - all required fields are present
+        var request = result.AssertSuccess();
         Assert.NotNull(request);
-        Assert.Equal("https://verifier.example.com", request.ClientId);
-        // The request object will have placeholder values for other fields
-        // because AuthorizationRequest requires them, but they should come from RequestObject
     }
 
     [Theory]
@@ -69,13 +65,14 @@ public class CrossDeviceAuthorizationRequestBuilderTests
     public void Build_CrossDevice_MissingClientId_ReturnsFailure(string responseMode)
     {
         var result = AuthorizationRequestBuilder.Create()
+            .WithNonce("test-nonce")
             .WithRequestUri("https://verifier.example.com/request")
             .WithResponseMode(responseMode)
             .Build();
 
-        Assert.False(result.IsSuccess);
-        Assert.Single(result.Errors);
-        Assert.Contains("client_id is required", result.Errors[0].Message);
+        var errors = result.AssertError();
+        Assert.Single(errors);
+        Assert.Contains("client_id is required", errors[0].Message);
     }
 
     [Theory]
@@ -90,8 +87,8 @@ public class CrossDeviceAuthorizationRequestBuilderTests
                 // Note: NOT setting request_uri
         );
 
-        Assert.False(result.IsSuccess);
-        Assert.Contains(result.Errors, e => e.Message.Contains("request_uri is REQUIRED for cross-device mode"));
+        var errors = result.AssertError();
+        Assert.Contains(errors, e => e.Message.Contains("request_uri is REQUIRED for cross-device mode"));
     }
 
     [Theory]
@@ -108,26 +105,8 @@ public class CrossDeviceAuthorizationRequestBuilderTests
                 .WithResponseMode(responseMode)
         );
 
-        Assert.False(result.IsSuccess);
-        Assert.Contains(result.Errors, e => e.Message.Contains("response_type MUST NOT be set in cross-device mode"));
-    }
-
-    [Theory]
-    [InlineData(ResponseModes.DirectPost)]
-    [InlineData(ResponseModes.DirectPostJwt)]
-    public void Build_CrossDevice_WithNonce_ReturnsFailure(string responseMode)
-    {
-        // nonce FORBIDDEN in minimal cross-device request
-        var result = CrossDeviceAuthorizationRequest.Build(builder =>
-            builder
-                .WithNonce("nonce-123")  // FORBIDDEN!
-                .WithClientId("https://verifier.example.com")
-                .WithRequestUri("https://verifier.example.com/request")
-                .WithResponseMode(responseMode)
-        );
-
-        Assert.False(result.IsSuccess);
-        Assert.Contains(result.Errors, e => e.Message.Contains("nonce MUST NOT be set in cross-device mode"));
+        var errors = result.AssertError();
+        Assert.Contains(errors, e => e.Message.Contains("response_type MUST NOT be set in cross-device mode"));
     }
 
     [Theory]
@@ -139,13 +118,14 @@ public class CrossDeviceAuthorizationRequestBuilderTests
         var result = CrossDeviceAuthorizationRequest.Build(builder =>
             builder
                 .WithClientId("https://verifier.example.com")
+                .WithNonce("nonce-value")  // REQUIRED
                 .WithRequestUri("https://verifier.example.com/request")
                 .WithResponseMode(responseMode)
                 .WithDcql(dcql => dcql.AddW3cVcCredential("cred-1", b => b.AddTypeValues("UniversityDegree")))  // FORBIDDEN!
         );
 
-        Assert.False(result.IsSuccess);
-        Assert.Contains(result.Errors, e => e.Message.Contains("dcql_query MUST NOT be set in cross-device mode"));
+        var errors = result.AssertError();
+        Assert.Contains(errors, e => e.Message.Contains("dcql_query MUST NOT be set in cross-device mode"));
     }
 
     [Theory]
@@ -157,13 +137,14 @@ public class CrossDeviceAuthorizationRequestBuilderTests
         var result = CrossDeviceAuthorizationRequest.Build(builder =>
             builder
                 .WithClientId("https://verifier.example.com")
+                .WithNonce("nonce-value")  // REQUIRED
                 .WithRequestUri("https://verifier.example.com/request")
                 .WithResponseMode(responseMode)
                 .WithRedirectUri("https://verifier.example.com/callback")  // FORBIDDEN!
         );
 
-        Assert.False(result.IsSuccess);
-        Assert.Contains(result.Errors, e => e.Message.Contains("redirect_uri MUST NOT be set in cross-device mode"));
+        var errors = result.AssertError();
+        Assert.Contains(errors, e => e.Message.Contains("redirect_uri MUST NOT be set in cross-device mode"));
     }
 
     [Theory]
@@ -171,18 +152,19 @@ public class CrossDeviceAuthorizationRequestBuilderTests
     [InlineData(ResponseModes.DirectPostJwt)]
     public void Build_CrossDevice_WithState_Succeeds(string responseMode)
     {
-        // state is optional in cross-device
+        // state is optional in cross-device, along with nonce which is required per spec
         var result = CrossDeviceAuthorizationRequest.Build(builder =>
             builder
                 .WithClientId("https://verifier.example.com")
+                .WithNonce("nonce-value")  // REQUIRED per spec
                 .WithRequestUri("https://verifier.example.com/request")
                 .WithResponseMode(responseMode)
                 .WithState("state-456")
         );
 
-        Assert.True(result.IsSuccess);
-        Assert.NotNull(result.Value);
-        Assert.Equal("state-456", result.Value.State);
+        // Should SUCCEED - all required fields are present
+        var request = result.AssertSuccess();
+        Assert.NotNull(request);
     }
 }
 

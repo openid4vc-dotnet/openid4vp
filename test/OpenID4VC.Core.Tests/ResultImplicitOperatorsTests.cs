@@ -1,5 +1,4 @@
 using OpenID4VC.Core.Results;
-using Xunit;
 
 namespace OpenID4VC.Core.Tests;
 

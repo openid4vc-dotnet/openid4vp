@@ -1,8 +1,7 @@
 using OpenID4VP.Builders;
 using OpenID4VP.Common;
 using OpenID4VP.Dcql.Query.Builders;
-using OpenID4VP.Validators;
-using OpenID4VC.Core.Results;
+using OpenID4VC.Core.Tests;
 
 namespace OpenID4VP.Tests.Builders;
 
@@ -53,8 +52,7 @@ public class SameDeviceAuthorizationRequestBuilderTests
                 .WithDcql(dcql => dcql.AddW3cVcCredential("cred-1", b => ConfigureValidW3cCredential(b)))
         );
 
-        Assert.True(result.IsSuccess);
-        var request = result.Value;
+        var request = result.AssertSuccess();
         Assert.NotNull(request);
         Assert.Equal(ResponseTypes.VpToken, request.ResponseType);
         Assert.Equal("https://verifier.example.com", request.ClientId);
@@ -78,8 +76,8 @@ public class SameDeviceAuthorizationRequestBuilderTests
                 .WithDcql(dcql => dcql.AddW3cVcCredential("cred-1", b => ConfigureValidW3cCredential(b)))
         );
 
-        Assert.False(result.IsSuccess);
-        Assert.Contains(result.Errors, e => e.Message.Contains("response_type is REQUIRED and must be 'vp_token' for same-device mode"));
+        var errors = result.AssertError();
+        Assert.Contains(errors, e => e.Message.Contains("response_type is REQUIRED and must be 'vp_token' for same-device mode"));
     }
 
     [Theory]
@@ -96,8 +94,8 @@ public class SameDeviceAuthorizationRequestBuilderTests
                 .WithDcql(dcql => dcql.AddW3cVcCredential("cred-1", b => ConfigureValidW3cCredential(b)))
         );
 
-        Assert.False(result.IsSuccess);
-        Assert.Contains(result.Errors, e => e.Message.Contains("nonce is REQUIRED for same-device mode"));
+        var errors = result.AssertError();
+        Assert.Contains(errors, e => e.Message.Contains("nonce is REQUIRED for same-device mode"));
     }
 
     [Theory]
@@ -115,8 +113,8 @@ public class SameDeviceAuthorizationRequestBuilderTests
                 .WithDcql(dcql => dcql.AddW3cVcCredential("cred-1", b => ConfigureValidW3cCredential(b)))
         );
 
-        Assert.False(result.IsSuccess);
-        Assert.Contains(result.Errors, e => e.Message.Contains("redirect_uri is REQUIRED for same-device mode"));
+        var errors = result.AssertError();
+        Assert.Contains(errors, e => e.Message.Contains("redirect_uri is REQUIRED for same-device mode"));
     }
 
     [Theory]
@@ -136,8 +134,8 @@ public class SameDeviceAuthorizationRequestBuilderTests
                 .WithDcql(dcql => dcql.AddW3cVcCredential("cred-1", b => ConfigureValidW3cCredential(b)))
         );
 
-        Assert.False(result.IsSuccess);
-        Assert.Contains(result.Errors, e => e.Message.Contains("request_uri MUST NOT be set in same-device mode"));
+        var errors = result.AssertError();
+        Assert.Contains(errors, e => e.Message.Contains("request_uri MUST NOT be set in same-device mode"));
     }
 
     [Theory]
@@ -156,8 +154,8 @@ public class SameDeviceAuthorizationRequestBuilderTests
                 .WithDcql(dcql => dcql.AddW3cVcCredential("cred-1", b => ConfigureValidW3cCredential(b)))
         );
 
-        Assert.True(result.IsSuccess);
-        Assert.NotNull(result.Value);
-        Assert.NotNull(result.Value.DcqlQuery);
+        var request = result.AssertSuccess();
+        Assert.NotNull(request);
+        Assert.NotNull(request.DcqlQuery);
     }
 }
