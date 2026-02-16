@@ -8,7 +8,7 @@
 
   <PropertyGroup>
     <PackageId>OpenID4VC.OpenID4VP</PackageId>
-    <Version>1.0.0-preview.2</Version>
+    <Version>1.0.0-preview.3</Version>
     <Authors>Geert Doornbos</Authors>
     <Description>OpenID for Verifiable Presentations implementation for .NET</Description>
     <PackageTags>OpenID4VC;OID4VC;OpenID4VP</PackageTags>
@@ -23,10 +23,6 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <!--<PackageReference Include="MinVer" Version="2.5.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>-->
   </ItemGroup>
   	
   <ItemGroup>

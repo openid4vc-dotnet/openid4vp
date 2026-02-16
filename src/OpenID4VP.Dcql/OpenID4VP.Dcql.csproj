@@ -4,23 +4,26 @@
 	<TargetFrameworks>net8.0;net10.0</TargetFrameworks>	  
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>	
-    
-    <PackageId>OpenID4VP.Dcql</PackageId>
-    <Version>1.0.0</Version>
-    <Authors>Geert Doornbos</Authors>
-    <Description>Digital Credentials Query Language (DCQL) implementation for .NET - A JSON-encoded query language for requesting Verifiable Presentations as defined in OpenID for Verifiable Presentations 1.0</Description>
-    <PackageTags>DCQL;OpenID4VC; OpenID4VP;Verifiable Credentials;Verifiable Presentations;SSI;OpenID;W3C VC;SD-JWT;mdoc</PackageTags>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <RepositoryUrl>https://github.com/digital-identity/dcql</RepositoryUrl>
-    
-    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
-    <AnalysisLevel>latest</AnalysisLevel>
-    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
-    
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <NoWarn>$(NoWarn);1591</NoWarn>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <PackageId>OpenID4VC.OpenID4VP.Dcql</PackageId>
+    <Version>1.0.0-preview.1</Version>
+    <Authors>Geert Doornbos</Authors>
+    <Description>Digital Credentials Query Language (DCQL) implementation for .NET - A JSON-encoded query language for requesting Verifiable Presentations as defined in OpenID for Verifiable Presentations 1.0</Description>
+    <PackageTags>DCQL;OpenID4VC;OID4VC;OpenID4VP</PackageTags>
+    <RepositoryUrl>https://github.com/openid4vc-dotnet/openid4vp</RepositoryUrl>
+	<IsPackable>true</IsPackable>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+	
   <ItemGroup>
     <PackageReference Include="FluentValidation" Version="12.1.1" />
   </ItemGroup>

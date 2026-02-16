@@ -6,4 +6,22 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <PackageId>OpenID4VC.OpenID4VP.Core</PackageId>
+    <Version>1.0.0-preview.1</Version>
+    <Authors>Geert Doornbos</Authors>
+    <Description></Description>
+    <PackageTags>OpenID4VC;OID4VC;OpenID4VP</PackageTags>
+    <RepositoryUrl>https://github.com/openid4vc-dotnet/openid4vp</RepositoryUrl>
+	<IsPackable>true</IsPackable>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
 </Project>
