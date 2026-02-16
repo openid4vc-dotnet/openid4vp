@@ -7,7 +7,7 @@ using OpenID4VP.Common;
 public class YiviDemoTests
 {
     [Fact]
-    public void Build_CrossDevice_ChirpPayYivi_Succeeds()
+    public void Build_CrossDevice_Yivi_Succeeds()
     {
         // Cross-device: Uses minimal request in QR code (client_id + request_uri)
         // Nonce comes in the full AuthorizationRequest fetched from request_uri
@@ -15,15 +15,14 @@ public class YiviDemoTests
             builder
                 .WithResponseMode(ResponseModes.DirectPost)
                 .WithNonce("random_nonce_value")
-                .WithClientId(ClientIdentifierPrefix.X509SanDns, "portal.chirppay.dev")
-                .WithRequestUri("https://portal.chirppay.dev/ibanrequest")
+                .WithClientId(ClientIdentifierPrefix.X509SanDns, "portal.verifier.dev")
+                .WithRequestUri("https://portal.verifier.dev/ibanrequest")
         );
 
         var request = result.AssertSuccess();
 
         Assert.NotNull(request);
-        Assert.Equal("x509_san_dns:portal.chirppay.dev", request.ClientId);
-        Assert.Equal("https://portal.chirppay.dev/ibanrequest", request.RequestUri);
+        Assert.Equal("x509_san_dns:portal.verifier.dev", request.ClientId);
+        Assert.Equal("https://portal.verifier.dev/ibanrequest", request.RequestUri);
     }
-
 }

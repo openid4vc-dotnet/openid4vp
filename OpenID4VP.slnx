@@ -3,13 +3,14 @@
     <File Path=".gitattributes" />
     <File Path=".gitignore" />
     <File Path="LICENSE" />
+    <File Path="README.md" />
   </Folder>
-  <Project Path="src/OpenID4VC.Core/OpenID4VC.Core.csproj" />
   <Folder Name="/Tests/">
     <Project Path="test/OpenID4VC.Core.Tests/OpenID4VC.Core.Tests.csproj" />
-    <Project Path="test/OpenID4VP.Dcql/OpenID4VP.Dcql.Tests.csproj" />
+    <Project Path="test/OpenID4VP.Dcql.Tests/OpenID4VP.Dcql.Tests.csproj" />
     <Project Path="test/OpenID4VP.Tests/OpenID4VP.Tests.csproj" Id="986f9b7f-979c-49e0-9b45-2b061f68d36a" />
   </Folder>
+  <Project Path="src/OpenID4VC.Core/OpenID4VC.Core.csproj" />
   <Project Path="src/OpenID4VP.Dcql/OpenID4VP.Dcql.csproj" />
   <Project Path="src/OpenID4VP/OpenID4VP.csproj" Id="5e926a6c-5d66-4b3d-9e40-90a2c4a0b91d" />
 </Solution>
