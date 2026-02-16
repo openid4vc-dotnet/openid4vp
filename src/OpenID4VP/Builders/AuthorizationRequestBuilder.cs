@@ -1,6 +1,7 @@
 using OpenID4VP.Dcql.Query.Builders;
 using OpenID4VP.Models;
 using OpenID4VC.Core.Results;
+using OpenID4VC.Core.Validation;
 
 namespace OpenID4VP.Builders;
 
@@ -110,12 +111,19 @@ public sealed class AuthorizationRequestBuilder
 
     /// <summary>
     /// Sets the nonce value. REQUIRED.
-    /// Must contain only ASCII URL-safe characters (uppercase/lowercase letters, decimal digits, hyphen, period, underscore, tilde).
+    /// Per OpenID4VP Spec Section 5.2: "Values MUST only contain ASCII URL safe characters."
+    /// Valid characters: A-Z, a-z, 0-9, hyphen (-), period (.), underscore (_), tilde (~)
     /// </summary>
     public AuthorizationRequestBuilder WithNonce(string? nonce)
     {
         if (string.IsNullOrWhiteSpace(nonce))
+        {
             _errors.Add(BuilderErrors.NonceIsRequired());
+        }
+        else if (!ValidationPatterns.IsValidNonce(nonce))
+        {
+            _errors.Add(BuilderErrors.InvalidNonceCharacters());
+        }
 
         _nonce = nonce;
         return this;

@@ -20,6 +20,9 @@ internal static class BuilderErrors
     public static Error NonceIsRequired()
         => new ValidationError("nonce is required", "Nonce");
 
+    public static Error InvalidNonceCharacters()
+        => new ValidationError("nonce must only contain ASCII URL safe characters (A-Z, a-z, 0-9, -, ., _, ~)", "Nonce");
+
     public static Error DcqlCanOnlyBeSetOnce()
         => new ValidationError("DCQL query can only be configured once", "DcqlQuery");
 

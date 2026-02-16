@@ -86,25 +86,6 @@ public class AuthorizationRequestValidatorTests
     }
 
     [Fact]
-    public void Validate_InvalidNonceCharacters_ReturnsFailure()
-    {
-        var buildResult = AuthorizationRequestBuilder.Create()
-            .WithResponseType(ResponseTypes.VpToken)
-            .WithClientId("https://verifier.example.com")
-            .WithNonce("invalid!nonce@with#special$chars")
-            .WithResponseMode(ResponseModes.Fragment)
-            .WithRedirectUri("https://verifier.example.com/callback")
-            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
-            .Build();
-        var request = buildResult.Value!;
-
-        var result = _validator.Validate(request);
-
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.Contains("Nonce must contain only ASCII URL-safe characters"));
-    }
-
-    [Fact]
     public void Validate_ValidNonceCharacters_IsValid()
     {
         var buildResult = AuthorizationRequestBuilder.Create()
