@@ -288,9 +288,10 @@ public sealed class AuthorizationRequestBuilder
         if (string.IsNullOrEmpty(_clientId))
             return BuilderErrors.ClientIdIsRequired();
 
-        if (string.IsNullOrEmpty(_responseMode))
-            return BuilderErrors.ResponseModeIsRequired();
-
+        // response_mode: Not required at build time - scenario-specific validators 
+        // will enforce requirements based on flow type (same-device, cross-device, etc.)
+        // Some flows like cross-device may not need response_mode in the minimal request
+        
         // Build DCQL if configured
         var dcqlQuery = _dcqlBuilder?.Build();
 
@@ -300,7 +301,7 @@ public sealed class AuthorizationRequestBuilder
             ResponseType = _responseType,
             ClientId = _clientId!,
             Nonce = _nonce,
-            ResponseMode = _responseMode!,
+            ResponseMode = _responseMode,  // Can be null - validators will enforce if needed
             DcqlQuery = dcqlQuery,
             RedirectUri = _redirectUri,
             ResponseUri = _responseUri,

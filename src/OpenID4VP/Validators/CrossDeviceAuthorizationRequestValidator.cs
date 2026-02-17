@@ -14,7 +14,7 @@ namespace OpenID4VP.Validators
     /// fetched from the request_uri endpoint (not the minimal QR code reference).
     /// 
     /// Cross-device AuthorizationRequest requirements:
-    /// - MUST have: client_id, request_uri, response_mode
+    /// - MUST have: client_id, request_uri
     /// - nonce is REQUIRED (per spec: "nonce: REQUIRED... for every Authorization Request")
     /// - response_type MUST NOT be set in minimal request, but required in RequestObject
     /// - dcql_query MUST NOT be set in minimal request
@@ -46,15 +46,6 @@ namespace OpenID4VP.Validators
             {
                 errors.Add("nonce is REQUIRED for cross-device mode. " +
                           "Per spec: 'nonce: REQUIRED... for every Authorization Request'");
-            }
-
-            // Check response_mode (if set, should be direct_post or direct_post.jwt)
-            if (!string.IsNullOrEmpty(request.ResponseMode) &&
-                request.ResponseMode != "direct_post" &&
-                request.ResponseMode != "direct_post.jwt")
-            {
-                errors.Add($"response_mode '{request.ResponseMode}' is not valid for cross-device mode. " +
-                          "Cross-device requires 'direct_post' or 'direct_post.jwt'");
             }
 
             // Check forbidden: response_type

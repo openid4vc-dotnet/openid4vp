@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using OpenID4VP.Common;
 using OpenID4VP.Models;
+using OpenID4VC.Core.Results;
 
 namespace OpenID4VP.Validators;
 
@@ -126,5 +127,64 @@ public sealed class AuthorizationRequestValidator : IValidator<AuthorizationRequ
 
         if (requestUriMethod != "get" && requestUriMethod != "post")
             errors.Add($"Request URI method must be 'get' or 'post', got: {requestUriMethod}");
+    }
+
+    /// <summary>
+    /// Validates AuthorizationRequest for Option A transport (Direct URL with all parameters).
+    /// Requires: client_id, nonce, response_type, response_mode
+    /// Optional: state, dcql_query or scope, redirect_uri, response_uri
+    /// </summary>
+    public IEnumerable<ValidationError> ValidateForDirectUrl(AuthorizationRequest request)
+    {
+        if (request == null)
+            throw new ArgumentNullException(nameof(request));
+
+        if (string.IsNullOrEmpty(request.ClientId))
+            yield return new ValidationError("client_id is required", "ClientId");
+
+        if (string.IsNullOrEmpty(request.Nonce))
+            yield return new ValidationError("nonce is required per OpenID4VP Spec Section 5.2", "Nonce");
+        else if (!UrlSafeCharacters.IsMatch(request.Nonce))
+            yield return new ValidationError("nonce must contain only ASCII URL-safe characters (A-Z, a-z, 0-9, -, ., _, ~)", "Nonce");
+
+        if (string.IsNullOrEmpty(request.ResponseType))
+            yield return new ValidationError("response_type is required", "ResponseType");
+        else if (request.ResponseType != VpToken && request.ResponseType != VpTokenIdToken)
+            yield return new ValidationError($"response_type must be '{VpToken}' or '{VpTokenIdToken}'", "ResponseType");
+
+        if (string.IsNullOrEmpty(request.ResponseMode))
+            yield return new ValidationError("response_mode is required for direct URL transport", "ResponseMode");
+        else
+        {
+            var validModes = new[] { "fragment", "query", "direct_post", "direct_post.jwt" };
+            if (!validModes.Contains(request.ResponseMode))
+                yield return new ValidationError($"response_mode must be one of: {string.Join(", ", validModes)}", "ResponseMode");
+        }
+
+        // Validate DCQL XOR Scope (at least one, not both)
+        var hasDcql = request.DcqlQuery != null;
+        var hasScope = !string.IsNullOrEmpty(request.Scope);
+        if (!hasDcql && !hasScope)
+            yield return new ValidationError("Either dcql_query or scope must be present", "DcqlQuery");
+        if (hasDcql && hasScope)
+            yield return new ValidationError("Only one of dcql_query or scope can be present, not both", "DcqlQuery");
+
+        // Validate state if present
+        if (!string.IsNullOrEmpty(request.State) && !UrlSafeCharacters.IsMatch(request.State))
+            yield return new ValidationError("state must contain only ASCII URL-safe characters (A-Z, a-z, 0-9, -, ., _, ~)", "State");
+
+        // Validate response_uri if needed
+        if (request.ResponseMode == "direct_post" || request.ResponseMode == "direct_post.jwt")
+        {
+            if (string.IsNullOrEmpty(request.ResponseUri))
+                yield return new ValidationError($"response_uri is required for response_mode '{request.ResponseMode}'", "ResponseUri");
+        }
+
+        // Validate request_uri_method if present
+        if (!string.IsNullOrEmpty(request.RequestUriMethod))
+        {
+            if (request.RequestUriMethod != "get" && request.RequestUriMethod != "post")
+                yield return new ValidationError("request_uri_method must be 'get' or 'post'", "RequestUriMethod");
+        }
     }
 }

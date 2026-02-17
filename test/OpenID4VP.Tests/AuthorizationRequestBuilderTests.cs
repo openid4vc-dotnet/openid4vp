@@ -96,8 +96,10 @@ public class AuthorizationRequestBuilderTests
     }
 
     [Fact]
-    public void Build_MissingResponseMode_ReturnsFailure()
+    public void Build_MissingResponseMode_Succeeds()
     {
+        // Builder allows building without response_mode - scenario-specific validators enforce requirements
+        // Some flows (like cross-device) don't require response_mode in the minimal request
         var result = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
             .WithClientId("https://verifier.example.com")
@@ -106,10 +108,10 @@ public class AuthorizationRequestBuilderTests
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
 
-        var errors = result.AssertError();
-        Assert.Single(errors);
-        Assert.IsType<ValidationError>(errors[0]);
-        Assert.Contains("response_mode is required", errors[0].Message);
+        // Builder allows building without response_mode - scenario validators will enforce
+        var request = result.AssertSuccess();
+        Assert.NotNull(request);
+        Assert.Null(request.ResponseMode);
     }
 
     [Fact]

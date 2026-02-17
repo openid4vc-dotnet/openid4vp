@@ -2,7 +2,6 @@
 
 using OpenID4VC.Core.Tests;
 using OpenID4VP.Builders;
-using OpenID4VP.Common;
 
 public class YiviDemoTests
 {
@@ -11,18 +10,21 @@ public class YiviDemoTests
     {
         // Cross-device: Uses minimal request in QR code (client_id + request_uri)
         // Nonce comes in the full AuthorizationRequest fetched from request_uri
-        var result = CrossDeviceAuthorizationRequest.Build(builder =>
-            builder
-                .WithResponseMode(ResponseModes.DirectPost)
-                .WithNonce("random_nonce_value")
-                .WithClientId(ClientIdentifierPrefix.X509SanDns, "portal.verifier.dev")
-                .WithRequestUri("https://portal.verifier.dev/ibanrequest")
-        );
 
-        var request = result.AssertSuccess();
+        var result = CrossDeviceRequestUriBuilder.Create()
+            .WithClientId(ClientIdentifierPrefix.X509SanDns, "portal.verifier.dev")
+            .WithRequestUri("https://portal.verifier.dev/ibanrequest")
+            .WithNonce("random_nonce_value")
+            .Build("openid4vp://");
 
-        Assert.NotNull(request);
-        Assert.Equal("x509_san_dns:portal.verifier.dev", request.ClientId);
-        Assert.Equal("https://portal.verifier.dev/ibanrequest", request.RequestUri);
+
+        var uri = result.AssertSuccess();
+
+        Assert.NotNull(uri);
+
+        Assert.Contains("client_id=x509_san_dns%3Aportal.verifier.dev", uri);
+        Assert.Contains("request_uri=https%3A%2F%2Fportal.verifier.dev%2Fibanrequest", uri);
+        Assert.Contains("nonce=random_nonce_value", uri);
+        Assert.Contains("openid4vp://", uri);
     }
 }

@@ -33,16 +33,17 @@ public class EdgeErrorAuthorizationRequestBuilderTests
     }
 
     [Fact]
-    public void Build_NoResponseMode_ReturnsFailure()
+    public void Build_NoResponseMode_Succeeds()
     {
+        // Builder allows building without response_mode - scenario-specific validators will enforce requirements
         var result = AuthorizationRequestBuilder.Create()
             .WithClientId("https://verifier.example.com")
             .WithNonce("test-nonce")
             .Build();
 
-        var errors = result.AssertError();
-        Assert.Single(errors);
-        Assert.Contains("response_mode is required", errors[0].Message);
+        var request = result.AssertSuccess();
+        Assert.NotNull(request);
+        Assert.Null(request.ResponseMode);
     }
 }
 
