@@ -1,9 +1,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using OpenID4VP.Models;
 using OpenID4VC.Core.Results;
 using OpenID4VP.Validators;
+using OpenID4VP.Dcql.Query.Serialization;
 
 namespace OpenID4VP.Builders;
 
@@ -23,6 +25,17 @@ namespace OpenID4VP.Builders;
 public class AuthorizationRequestUriBuilderContext
 {
     private readonly AuthorizationRequest _request;
+
+    /// <summary>
+    /// JSON serialization options with SnakeCaseLower naming policy for OpenID4VP compliance.
+    /// Matches the format used by DCQL queries and other OpenID4VP parameters.
+    /// </summary>
+    private static readonly JsonSerializerOptions SnakeCaseOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+        WriteIndented = false,
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+    };
 
     internal AuthorizationRequestUriBuilderContext(AuthorizationRequest request)
     {
@@ -78,10 +91,10 @@ public class AuthorizationRequestUriBuilderContext
             queryParams["response_uri"] = _request.ResponseUri;
 
         if (_request.DcqlQuery != null)
-            queryParams["dcql_query"] = JsonSerializer.Serialize(_request.DcqlQuery);
+            queryParams["dcql_query"] = DcqlQuerySerializer.Serialize(_request.DcqlQuery);
 
         if (_request.ClientMetadata != null)
-            queryParams["client_metadata"] = JsonSerializer.Serialize(_request.ClientMetadata);
+            queryParams["client_metadata"] = JsonSerializer.Serialize(_request.ClientMetadata, SnakeCaseOptions);
 
         var uri = BuildUriWithQueryParameters(baseUri, queryParams);
         return Result<string>.Success(uri);
