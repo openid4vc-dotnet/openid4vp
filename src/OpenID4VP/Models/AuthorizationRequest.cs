@@ -113,7 +113,7 @@ public sealed record AuthorizationRequest
     /// Specification: Section 5.1
     /// </summary>
     [JsonPropertyName("client_metadata")]
-    public VerifierMetadata? ClientMetadata { get; init; }
+    public ClientMetadata? ClientMetadata { get; init; }
 
     /// <summary>
     /// OPTIONAL. Non-empty array of attestations about the Verifier relevant to the Credential Request.

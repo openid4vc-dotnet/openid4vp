@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using Microsoft.IdentityModel.Tokens;
 using OpenID4VP.Builders;
 using OpenID4VP.Common;
 using OpenID4VP.Dcql.Query.Builders;
@@ -249,7 +251,7 @@ public class AuthorizationRequestBuilderTests
             .WithRedirectUri("https://verifier.example.com/callback")
             .WithState("state-value")
             .WithRequestUriMethod("post")
-            .WithClientMetadata(VerifierMetadataBuilder.Create().Build())
+            .WithClientMetadata(metadata => metadata.WithName("verifier"))
             .AddVerifierAttestation(attestation)
             .AddTransactionData("eyJhbGciOiJFUzI1In0")
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
@@ -702,6 +704,135 @@ public class AuthorizationRequestBuilderTests
         var errors = result.AssertError();
         var errorMessages = errors.Select(e => e.Message).ToList();
         Assert.Contains(errorMessages, m => m.Contains("client_id is required"));
+    }
+
+    #endregion
+
+    #region Client Metadata - JWKS Key Extraction Tests
+
+    [Fact]
+    public void WithClientMetadata_WithRsaPublicKey_Succeeds()
+    {
+        // Arrange
+        using var rsa = RSA.Create(2048);
+        var rsaKey = new RsaSecurityKey(rsa);
+
+        // Act
+        var result = AuthorizationRequestBuilder.Create()
+            .WithResponseType(ResponseTypes.VpToken)
+            .WithClientId("https://verifier.example.com")
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.com/callback")
+            .WithClientMetadata(metadata => metadata
+                .WithName("Test Verifier")
+                .WithPublicKeysFromRsaPrivateKey(rsaKey))
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
+
+        // Assert
+        var request = result.AssertSuccess();
+        Assert.NotNull(request.ClientMetadata);
+    }
+
+    [Fact]
+    public void WithClientMetadata_WithEcdsaPublicKey_Succeeds()
+    {
+        // Arrange
+        using var ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var ecdsaKey = new ECDsaSecurityKey(ecdsa);
+
+        // Act
+        var result = AuthorizationRequestBuilder.Create()
+            .WithResponseType(ResponseTypes.VpToken)
+            .WithClientId("https://verifier.example.com")
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.com/callback")
+            .WithClientMetadata(metadata => metadata
+                .WithName("Test Verifier")
+                .WithPublicKeysFromEcdsaPrivateKey(ecdsaKey))
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
+
+        // Assert
+        var request = result.AssertSuccess();
+        Assert.NotNull(request.ClientMetadata);
+    }
+
+    [Fact]
+    public void WithClientMetadata_WithMultipleKeys_Succeeds()
+    {
+        // Arrange
+        using var rsa1 = RSA.Create(2048);
+        using var rsa2 = RSA.Create(3072);
+        var keys = new SecurityKey[]
+        {
+            new RsaSecurityKey(rsa1),
+            new RsaSecurityKey(rsa2)
+        };
+
+        // Act
+        var result = AuthorizationRequestBuilder.Create()
+            .WithResponseType(ResponseTypes.VpToken)
+            .WithClientId("https://verifier.example.com")
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.com/callback")
+            .WithClientMetadata(metadata => metadata
+                .WithName("Test Verifier")
+                .WithPublicKeysFromPrivateKeys(keys))
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
+
+        // Assert
+        var request = result.AssertSuccess();
+        Assert.NotNull(request.ClientMetadata);
+    }
+
+    [Fact]
+    public void WithClientMetadata_WithClientNameOnly_Succeeds()
+    {
+        // Act
+        var result = AuthorizationRequestBuilder.Create()
+            .WithResponseType(ResponseTypes.VpToken)
+            .WithClientId("https://verifier.example.com")
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.com/callback")
+            .WithClientMetadata(metadata => metadata
+                .WithName("My App"))
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
+
+        // Assert
+        var request = result.AssertSuccess();
+        Assert.NotNull(request.ClientMetadata);
+    }
+
+    [Fact]
+    public void WithClientMetadata_FailingKeyExtraction_ReturnsError()
+    {
+        // Arrange - Unsupported key type
+        var symmetricKey = new SymmetricSecurityKey(new byte[32]);
+        var keys = new SecurityKey[] { symmetricKey };
+
+        // Act
+        var result = AuthorizationRequestBuilder.Create()
+            .WithResponseType(ResponseTypes.VpToken)
+            .WithClientId("https://verifier.example.com")
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.com/callback")
+            .WithClientMetadata(metadata => metadata
+                .WithName("Test Verifier")
+                .WithPublicKeysFromPrivateKeys(keys))
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
+
+        // Assert
+        var errors = result.AssertError();
+        Assert.Contains(errors, e => e.Message.Contains("Unsupported key type"));
     }
 
     #endregion

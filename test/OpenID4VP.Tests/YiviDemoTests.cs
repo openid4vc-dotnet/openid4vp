@@ -51,6 +51,9 @@ public class YiviDemoTests : IDisposable
     [Fact]
     public void Build_AuthRequestByRef_Yivi_Succeeds()
     {
+        using var ecdsa256 = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var ecdsaKey = new ECDsaSecurityKey(ecdsa256);
+
         // Arrange
         var request = AuthorizationRequestBuilder.Create()
             .WithClientId(ClientIdentifierPrefix.X509SanDns, "portal.verifier.dev")
@@ -66,11 +69,10 @@ public class YiviDemoTests : IDisposable
                         .AddClaim("iban", "iban");
                 });
             })
+            .WithClientMetadata(metadata => metadata
+                .WithName("verifier")
+                .WithPublicKeysFromEcdsaPrivateKey(ecdsaKey))
             .Build();
-
-        using var ecdsa256 = ECDsa.Create(ECCurve.NamedCurves.nistP256);
-        var ecdsaKey = new ECDsaSecurityKey(ecdsa256);
-
 
         // Act
         var result = JwtSecuredAuthorizationRequestBuilder.Create(request)

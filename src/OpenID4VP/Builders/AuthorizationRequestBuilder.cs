@@ -1,3 +1,6 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Text.Json;
+using Microsoft.IdentityModel.Tokens;
 using OpenID4VP.Dcql.Query.Builders;
 using OpenID4VP.Models;
 using OpenID4VC.Core.Results;
@@ -30,7 +33,7 @@ public sealed class AuthorizationRequestBuilder
     private string? _state;
     private string? _scope;
     private string? _requestUriMethod;
-    private VerifierMetadata? _clientMetadata;
+    private ClientMetadata? _clientMetadata;
     private List<VerifierAttestation>? _verifierInfo;
     private List<string>? _transactionData;
     private readonly List<Error> _errors = [];
@@ -226,11 +229,40 @@ public sealed class AuthorizationRequestBuilder
     }
 
     /// <summary>
-    /// Sets the Verifier metadata (client_metadata parameter).
+    /// Sets the Verifier metadata (client_metadata parameter) using a fluent context builder.
+    /// 
+    /// This is the recommended way to configure metadata, providing a clean fluent API for all options.
+    /// 
+    /// Example:
+    /// <code>
+    /// .WithClientMetadata(metadata => metadata
+    ///     .WithName("MyVerifier")
+    ///     .WithLogoUri("https://example.com/logo.png")
+    ///     .WithJwksUri("https://example.com/jwks.json")
+    ///     .WithPublicKeysFromRsaPrivateKey(rsaKey))
+    /// </code>
     /// </summary>
-    public AuthorizationRequestBuilder WithClientMetadata(VerifierMetadata? clientMetadata)
+    /// <param name="configure">Callback to configure the ClientMetadata context</param>
+    /// <returns>This builder for fluent chaining</returns>
+    public AuthorizationRequestBuilder WithClientMetadata(Action<ClientMetadataBuilderContext>? configure)
     {
-        _clientMetadata = clientMetadata;
+        if (configure == null)
+        {
+            _errors.Add(new ValidationError("ClientMetadata configure callback cannot be null", "validation_error"));
+            return this;
+        }
+
+        var context = ClientMetadataBuilderContext.Create();
+        configure(context);
+        var result = context.Build();
+
+        if (!result.IsSuccess)
+        {
+            _errors.AddRange(result.Errors);
+            return this;
+        }
+
+        _clientMetadata = result.Value;
         return this;
     }
 
