@@ -56,14 +56,14 @@ public class AuthorizationRequestUriBuilderContext
     public Result<string> AsDirectUrl(string baseUri)
     {
         if (string.IsNullOrEmpty(baseUri))
-            return Result<string>.Failure(new ValidationError("Base URI cannot be null or empty", "baseUri"));
+            return new ValidationError("Base URI cannot be null or empty", "baseUri");
 
         // Validate the authorization request
         var validator = new AuthorizationRequestValidator();
         var validationErrors = validator.ValidateForDirectUrl(_request).ToList();
 
         if (validationErrors.Any())
-            return Result<string>.Failure(validationErrors);
+            return validationErrors.ToArray();
 
         var queryParams = new Dictionary<string, string>();
 
@@ -97,7 +97,7 @@ public class AuthorizationRequestUriBuilderContext
             queryParams["client_metadata"] = JsonSerializer.Serialize(_request.ClientMetadata, SnakeCaseOptions);
 
         var uri = BuildUriWithQueryParameters(baseUri, queryParams);
-        return Result<string>.Success(uri);
+        return uri;
     }
 
     /// <summary>
@@ -118,10 +118,10 @@ public class AuthorizationRequestUriBuilderContext
     public Result<string> AsRequestObjectByValue(string baseUri, string requestObjectJwt)
     {
         if (string.IsNullOrEmpty(baseUri))
-            return Result<string>.Failure(new ValidationError("Base URI cannot be null or empty", "baseUri"));
+            return new ValidationError("Base URI cannot be null or empty", "baseUri");
 
         if (string.IsNullOrEmpty(requestObjectJwt))
-            return Result<string>.Failure(new ValidationError("Request Object JWT cannot be null or empty", "requestObjectJwt"));
+            return new ValidationError("Request Object JWT cannot be null or empty", "requestObjectJwt");
 
         // For Option B, the JWT itself is the "request" - just add it to URI
         var queryParams = new Dictionary<string, string>
@@ -130,7 +130,7 @@ public class AuthorizationRequestUriBuilderContext
         };
 
         var uri = BuildUriWithQueryParameters(baseUri, queryParams);
-        return Result<string>.Success(uri);
+        return uri;
     }
 
     /// <summary>
@@ -155,12 +155,12 @@ public class AuthorizationRequestUriBuilderContext
     public Result<string> AsRequestObjectByReference(string baseUri)
     {
         if (string.IsNullOrEmpty(baseUri))
-            return Result<string>.Failure(new ValidationError("Base URI cannot be null or empty", "baseUri"));
+            return new ValidationError("Base URI cannot be null or empty", "baseUri");
 
         // For cross-device, validate minimal required fields
         var errors = ValidateForRequestByReference().ToList();
         if (errors.Any())
-            return Result<string>.Failure(errors);
+            return errors.ToArray();
 
         var queryParams = new Dictionary<string, string>();
 
@@ -178,7 +178,7 @@ public class AuthorizationRequestUriBuilderContext
             queryParams["request_uri_method"] = _request.RequestUriMethod.ToLowerInvariant();
 
         var uri = BuildUriWithQueryParameters(baseUri, queryParams);
-        return Result<string>.Success(uri);
+        return uri;
     }
 
     /// <summary>
