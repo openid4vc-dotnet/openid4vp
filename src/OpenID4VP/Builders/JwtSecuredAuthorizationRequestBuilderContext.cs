@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.IdentityModel.Tokens;
@@ -36,6 +38,7 @@ public class JwtSecuredAuthorizationRequestBuilderContext
     private string? _issuer;
     private string? _audience;
     private TimeSpan _expirationTime = TimeSpan.FromMinutes(5);
+    private X509Certificate2[]? _certificateChain;
 
     /// <summary>
     /// JSON serialization options with SnakeCaseLower naming policy for OpenID4VP compliance.
@@ -230,14 +233,37 @@ public class JwtSecuredAuthorizationRequestBuilderContext
     }
 
     /// <summary>
-    /// Sets the expiration time for the JWT. Defaults to 5 minutes.
-    /// The JWT will include an "exp" claim set to now + expirationTime.
+    /// Sets the expiration time for the JWT (exp claim).
+    /// This is OPTIONAL. Defaults to 5 minutes.
     /// </summary>
-    /// <param name="expirationTime">The duration for which the JWT is valid</param>
+    /// <param name="expirationTime">The expiration duration from now</param>
     /// <returns>This builder context for fluent chaining</returns>
     public JwtSecuredAuthorizationRequestBuilderContext WithExpirationTime(TimeSpan expirationTime)
     {
         _expirationTime = expirationTime;
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the X.509 certificate chain to be included in the JWT header (x5c parameter) per RFC 7515.
+    /// 
+    /// Used for Client Identifiers with x509_san_dns prefix to:
+    /// 1. Add certificate chain to JWT x5c header
+    /// 2. Validate DNS name matches a dNSName SAN in the leaf certificate
+    /// 3. Validate signing key corresponds to certificate public key
+    /// 
+    /// Per OpenID4VP and RFC 5280, when using x509_san_dns prefix:
+    /// - The DNS name must match a dNSName entry in the leaf certificate's SAN
+    /// - The request must be signed with the private key corresponding to the certificate
+    /// </summary>
+    /// <param name="certificateChain">X.509 certificate chain (leaf certificate first)</param>
+    /// <returns>This builder context for fluent chaining</returns>
+    public JwtSecuredAuthorizationRequestBuilderContext WithX509CertificateChain(X509Certificate2[] certificateChain)
+    {
+        if (certificateChain == null || certificateChain.Length == 0)
+            throw new ArgumentException("Certificate chain cannot be null or empty", nameof(certificateChain));
+
+        _certificateChain = certificateChain;
         return this;
     }
 
@@ -316,7 +342,7 @@ public class JwtSecuredAuthorizationRequestBuilderContext
             var handler = new JwtSecurityTokenHandler();
             var signingCredentials = new SigningCredentials(_signingKey, _signingAlgorithm);
 
-            // Step 4: Create JWT security token
+            // Step 4: Create JWT security token (without custom header initially)
             var token = new JwtSecurityToken(
                 issuer: _issuer,
                 audience: _audience,
@@ -325,16 +351,40 @@ public class JwtSecuredAuthorizationRequestBuilderContext
                 expires: expiry,
                 signingCredentials: signingCredentials);
 
-            // Step 5: Serialize to JWT string (JWS format)
+            // Step 5: Set typ header parameter per RFC 9101 and OpenID4VP spec
+            // The typ header identifies this as an OAuth Authorization Request JWT
+            token.Header["typ"] = "oauth-authz-req+jwt";
+
+            // Step 5b: If certificate chain provided, add x5c header per RFC 7515
+            // and validate x509_san_dns requirements if applicable
+            if (_certificateChain != null && _certificateChain.Length > 0)
+            {
+                // Validate x509_san_dns requirements if Client Identifier uses that prefix
+                var x509ValidationResult = ValidateX509SanDnsRequirements(_request, _certificateChain, _signingKey);
+                if (!x509ValidationResult.IsSuccess)
+                    return Result<JwtSecuredAuthorizationRequest>.Failure(x509ValidationResult.Errors.ToArray());
+
+                // Add x5c header: array of base64url-encoded DER certificates
+                var x5cArray = _certificateChain
+                    .Select(cert => Convert.ToBase64String(cert.RawData)
+                        .Replace('+', '-')
+                        .Replace('/', '_')
+                        .TrimEnd('='))
+                    .ToList();
+                
+                token.Header["x5c"] = x5cArray;
+            }
+
+            // Step 6: Serialize to JWT string (JWS format)
             var jwtToken = handler.WriteToken(token);
 
-            // Step 6: If encryption is configured, encrypt the JWT (JWE format)
+            // Step 7: If encryption is configured, encrypt the JWT (JWE format)
             // Note: JWE support requires additional configuration with JwtSecurityTokenHandler
             // For now, we return the JWS token. Full JWE support would require:
             // handler.EncryptingCredentials = new EncryptingCredentials(...)
             // This is left for future implementation with proper JWE handling
 
-            // Step 7: Create the result
+            // Step 8: Create the result
             var jar = new JwtSecuredAuthorizationRequest
             {
                 Token = jwtToken,
@@ -399,5 +449,200 @@ public class JwtSecuredAuthorizationRequestBuilderContext
     private static string DeriveRsaEncryptionAlgorithm(RsaSecurityKey key)
     {
         return key.KeySize >= 4096 ? "RSA-OAEP-256" : "RSA-OAEP";
+    }
+
+    /// <summary>
+    /// Validates x509_san_dns requirements per OpenID4VP and RFC 5280:
+    /// 1. DNS name matches a dNSName in leaf certificate's SAN
+    /// 2. Signing key corresponds to certificate's public key
+    /// </summary>
+    private Result<bool> ValidateX509SanDnsRequirements(
+        AuthorizationRequest request,
+        X509Certificate2[] certificateChain,
+        SecurityKey? signingKey)
+    {
+        if (certificateChain.Length == 0)
+            return new ValidationError("Certificate chain is empty", "x509_chain_empty");
+
+        var errors = new List<ValidationError>();
+        
+        // Check if Client Identifier uses x509_san_dns prefix
+        if (!string.IsNullOrEmpty(request.ClientId) && request.ClientId.StartsWith("x509_san_dns:"))
+        {
+            var dnsName = request.ClientId.Substring("x509_san_dns:".Length);
+            var leafCert = certificateChain[0];
+
+            // Validate DNS name matches SAN
+            var dnsValidation = ValidateDnsNameInSan(dnsName, leafCert);
+            if (!dnsValidation)
+                errors.Add(new ValidationError(
+                    $"DNS name '{dnsName}' does not match any dNSName in certificate SAN",
+                    "x509_dns_mismatch"));
+
+            // Validate key correspondence
+            if (signingKey != null)
+            {
+                var keyValidation = ValidateKeyCorrespondence(signingKey, leafCert);
+                if (!keyValidation)
+                    errors.Add(new ValidationError(
+                        "Signing key does not correspond to certificate public key",
+                        "x509_key_mismatch"));
+            }
+        }
+
+        if (errors.Count > 0)
+            return errors.ToArray();
+
+        return true;
+    }
+
+    /// <summary>
+    /// Validates that the DNS name matches a dNSName entry in the certificate's SAN.
+    /// Per RFC 5280, compares case-insensitively and supports wildcard patterns.
+    /// </summary>
+    private static bool ValidateDnsNameInSan(string dnsName, X509Certificate2 certificate)
+    {
+        // Extract dNSName values from Subject Alternative Name extension
+        var sanDnsNames = ExtractDnsNamesFromSan(certificate);
+        
+        if (sanDnsNames.Count == 0)
+            return false;
+
+        // Compare case-insensitively (DNS names are case-insensitive per RFC)
+        var dnsNameLower = dnsName.ToLowerInvariant();
+        
+        foreach (var sanName in sanDnsNames)
+        {
+            if (sanName.Equals(dnsNameLower, StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            // Support wildcard matching (e.g., *.example.com matches foo.example.com)
+            if (IsWildcardMatch(dnsNameLower, sanName))
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Extracts dNSName values from certificate's Subject Alternative Name extension.
+    /// </summary>
+    private static List<string> ExtractDnsNamesFromSan(X509Certificate2 certificate)
+    {
+        var dnsNames = new List<string>();
+
+        foreach (var extension in certificate.Extensions)
+        {
+            if (extension.Oid?.Value == "2.5.29.17") // Subject Alternative Name OID
+            {
+                try
+                {
+                    var sanExtension = (X509Extension)extension;
+                    var sanString = sanExtension.Format(false);
+                    
+                    // Parse SAN string looking for "DNS Name=" entries
+                    var lines = sanString.Split('\n');
+                    foreach (var line in lines)
+                    {
+                        var trimmed = line.Trim();
+                        if (trimmed.StartsWith("DNS Name="))
+                        {
+                            var dnsName = trimmed.Substring("DNS Name=".Length).Trim();
+                            dnsNames.Add(dnsName.ToLowerInvariant());
+                        }
+                    }
+                }
+                catch
+                {
+                    // Silently skip parsing errors
+                }
+            }
+        }
+
+        return dnsNames;
+    }
+
+    /// <summary>
+    /// Checks if a DNS name matches a wildcard pattern.
+    /// E.g., "foo.example.com" matches "*.example.com"
+    /// </summary>
+    private static bool IsWildcardMatch(string dnsName, string pattern)
+    {
+        if (!pattern.StartsWith("*.", StringComparison.Ordinal))
+            return false;
+
+        // Extract the suffix (without the *)
+        var suffix = pattern.Substring(1); // Remove * but keep the .
+        return dnsName.EndsWith(suffix, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Validates that the signing key corresponds to the certificate's public key.
+    /// Supports RSA and ECDSA keys.
+    /// </summary>
+    private static bool ValidateKeyCorrespondence(SecurityKey signingKey, X509Certificate2 certificate)
+    {
+        var certPublicKey = certificate.PublicKey.Key;
+
+        return signingKey switch
+        {
+            RsaSecurityKey rsaKey => ValidateRsaKeyCorrespondence(rsaKey, certPublicKey),
+            ECDsaSecurityKey ecdsaKey => ValidateEcdsaKeyCorrespondence(ecdsaKey, certPublicKey),
+            _ => false // Unsupported key type
+        };
+    }
+
+    /// <summary>
+    /// Validates RSA key correspondence by comparing modulus and exponent.
+    /// </summary>
+    private static bool ValidateRsaKeyCorrespondence(RsaSecurityKey signingKey, AsymmetricAlgorithm? certPublicKey)
+    {
+        if (certPublicKey is not RSA certRsa)
+            return false;
+
+        try
+        {
+            var signingRsa = signingKey.Rsa;
+            if (signingRsa == null)
+                return false;
+
+            var signingRsaParams = signingRsa.ExportParameters(false);
+            var certRsaParams = certRsa.ExportParameters(false);
+
+            // Compare modulus and exponent
+            return (signingRsaParams.Modulus?.SequenceEqual(certRsaParams.Modulus ?? Array.Empty<byte>()) ?? false) &&
+                   (signingRsaParams.Exponent?.SequenceEqual(certRsaParams.Exponent ?? Array.Empty<byte>()) ?? false);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Validates ECDSA key correspondence by comparing curve and public point.
+    /// </summary>
+    private static bool ValidateEcdsaKeyCorrespondence(ECDsaSecurityKey signingKey, AsymmetricAlgorithm? certPublicKey)
+    {
+        if (certPublicKey is not ECDsa certEcdsa)
+            return false;
+
+        try
+        {
+            var signingEcdsa = signingKey.ECDsa;
+            if (signingEcdsa == null)
+                return false;
+
+            var signingEcdsaParams = signingEcdsa.ExportParameters(false);
+            var certEcdsaParams = certEcdsa.ExportParameters(false);
+
+            // Compare Q (public point) - X and Y coordinates
+            return (signingEcdsaParams.Q.X?.SequenceEqual(certEcdsaParams.Q.X ?? Array.Empty<byte>()) ?? false) &&
+                   (signingEcdsaParams.Q.Y?.SequenceEqual(certEcdsaParams.Q.Y ?? Array.Empty<byte>()) ?? false);
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

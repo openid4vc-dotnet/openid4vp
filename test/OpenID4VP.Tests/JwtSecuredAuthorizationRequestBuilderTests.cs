@@ -4,6 +4,7 @@ using OpenID4VP.Models;
 using Xunit;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 
 namespace OpenID4VP.Tests;
 
@@ -103,6 +104,42 @@ public class JwtSecuredAuthorizationRequestBuilderTests : IDisposable
         var token = result.Value.Token;
         var parts = token.Split('.');
         Assert.Equal(3, parts.Length); // header.payload.signature
+    }
+
+    /// <summary>
+    /// Test 2b: Verify JWT header includes typ parameter set to "oauth-authz-req+jwt" per RFC 9101.
+    /// This ensures spec compliance for JWT-Secured Authorization Requests.
+    /// </summary>
+    [Fact]
+    public void Build_IncludesTypHeaderParameter()
+    {
+        // Arrange
+        var request = CreateValidRequest();
+
+        // Act
+        var result = JwtSecuredAuthorizationRequestBuilder.Create(request)
+            .WithRsaSigningKey(_rsaPrivateKey)
+            .Build();
+
+        // Assert
+        Assert.True(result.IsSuccess, $"Build failed: {string.Join("; ", result.Errors.Select(e => e.Message))}");
+        
+        // Decode the JWT header to verify typ parameter
+        var token = result.Value.Token;
+        var parts = token.Split('.');
+        var headerPart = parts[0];
+        
+        // Base64url decode the header
+        var padding = new string('=', (4 - headerPart.Length % 4) % 4);
+        var base64 = headerPart.Replace('-', '+').Replace('_', '/') + padding;
+        var headerJson = System.Text.Encoding.UTF8.GetString(System.Convert.FromBase64String(base64));
+        
+        // Parse JSON and verify typ header
+        using var jsonDoc = System.Text.Json.JsonDocument.Parse(headerJson);
+        var root = jsonDoc.RootElement;
+        
+        Assert.True(root.TryGetProperty("typ", out var typElement), "Header should contain 'typ' parameter");
+        Assert.Equal("oauth-authz-req+jwt", typElement.GetString());
     }
 
     /// <summary>
@@ -756,4 +793,290 @@ public class JwtSecuredAuthorizationRequestBuilderTests : IDisposable
         Assert.True(result.Value.IsEncrypted);
         Assert.Equal("A256KW", result.Value.EncryptionAlgorithm);
     }
+
+    #region x5c Header Format Tests
+
+    /// <summary>
+    /// Helper: Create a self-signed X.509 certificate for testing.
+    /// </summary>
+    private static X509Certificate2 CreateSelfSignedCertificate(string subjectName)
+    {
+        using (var rsa = RSA.Create(2048))
+        {
+            var request = new System.Security.Cryptography.X509Certificates.CertificateRequest(
+                $"CN={subjectName}",
+                rsa,
+                System.Security.Cryptography.HashAlgorithmName.SHA256,
+                System.Security.Cryptography.RSASignaturePadding.Pkcs1);
+
+            var cert = request.CreateSelfSigned(
+                DateTime.UtcNow,
+                DateTime.UtcNow.AddYears(1));
+
+            return cert;
+        }
+    }
+
+    /// <summary>
+    /// Helper: Extract x5c array from JWT header.
+    /// Returns list of base64url-encoded certificate strings.
+    /// </summary>
+    private static List<string> ExtractX5cFromJwt(string token)
+    {
+        var parts = token.Split('.');
+        if (parts.Length < 3)
+            throw new ArgumentException("Invalid JWT format");
+
+        // Decode header (base64url -> JSON)
+        var headerPart = parts[0];
+        var padding = new string('=', (4 - headerPart.Length % 4) % 4);
+        var base64 = headerPart.Replace('-', '+').Replace('_', '/') + padding;
+        var headerJson = System.Text.Encoding.UTF8.GetString(
+            System.Convert.FromBase64String(base64));
+
+        // Parse JSON and extract x5c array
+        using var jsonDoc = System.Text.Json.JsonDocument.Parse(headerJson);
+        var root = jsonDoc.RootElement;
+
+        if (!root.TryGetProperty("x5c", out var x5cElement))
+            return new List<string>();
+
+        var x5c = new List<string>();
+        if (x5cElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+        {
+            foreach (var item in x5cElement.EnumerateArray())
+            {
+                if (item.ValueKind == System.Text.Json.JsonValueKind.String)
+                {
+                    var cert = item.GetString();
+                    if (!string.IsNullOrEmpty(cert))
+                        x5c.Add(cert);
+                }
+            }
+        }
+
+        return x5c;
+    }
+
+    /// <summary>
+    /// Helper: Decode base64url string to byte array.
+    /// </summary>
+    private static byte[] DecodeBase64Url(string base64Url)
+    {
+        var padding = new string('=', (4 - base64Url.Length % 4) % 4);
+        var base64 = base64Url.Replace('-', '+').Replace('_', '/') + padding;
+        return System.Convert.FromBase64String(base64);
+    }
+
+    /// <summary>
+    /// Test 32a: x5c header is present when certificate chain is provided.
+    /// Verifies RFC 7515 compliance for x5c header inclusion.
+    /// </summary>
+    [Fact]
+    public void Build_WithX509CertificateChain_IncludesX5cHeader()
+    {
+        // Arrange
+        var cert = CreateSelfSignedCertificate("test.example.com");
+        var request = CreateValidRequest();
+
+        // Act
+        var result = JwtSecuredAuthorizationRequestBuilder.Create(request)
+            .WithRsaSigningKey(_rsaPrivateKey)
+            .WithX509CertificateChain(new[] { cert })
+            .Build();
+
+        // Assert
+        Assert.True(result.IsSuccess, $"Build failed: {string.Join("; ", result.Errors.Select(e => e.Message))}");
+        
+        var x5c = ExtractX5cFromJwt(result.Value.Token);
+        Assert.NotEmpty(x5c);
+        Assert.Single(x5c);
+    }
+
+    /// <summary>
+    /// Test 32b: x5c header is absent when no certificate chain is provided.
+    /// Ensures x5c only appears when explicitly configured.
+    /// </summary>
+    [Fact]
+    public void Build_WithoutX509CertificateChain_OmitsX5cHeader()
+    {
+        // Arrange
+        var request = CreateValidRequest();
+
+        // Act
+        var result = JwtSecuredAuthorizationRequestBuilder.Create(request)
+            .WithRsaSigningKey(_rsaPrivateKey)
+            .Build();
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        
+        var x5c = ExtractX5cFromJwt(result.Value.Token);
+        Assert.Empty(x5c);
+    }
+
+    /// <summary>
+    /// Test 32c: Certificates in x5c are base64url-encoded and can be decoded to original DER.
+    /// Verifies encoding correctness per RFC 7515.
+    /// </summary>
+    [Fact]
+    public void Build_WithX509CertificateChain_EncodesCertificatesAsBase64url()
+    {
+        // Arrange
+        var cert = CreateSelfSignedCertificate("test.example.com");
+        var request = CreateValidRequest();
+
+        // Act
+        var result = JwtSecuredAuthorizationRequestBuilder.Create(request)
+            .WithRsaSigningKey(_rsaPrivateKey)
+            .WithX509CertificateChain(new[] { cert })
+            .Build();
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        
+        var x5c = ExtractX5cFromJwt(result.Value.Token);
+        Assert.Single(x5c);
+
+        // Decode and verify matches original certificate DER
+        var decodedDer = DecodeBase64Url(x5c[0]);
+        Assert.Equal(cert.RawData, decodedDer);
+    }
+
+    /// <summary>
+    /// Test 32d: Certificate chain order is preserved (leaf certificate first).
+    /// Per OpenID4VP spec, leaf certificate must come first in x5c array.
+    /// </summary>
+    [Fact]
+    public void Build_WithX509CertificateChain_PreservesChainOrder()
+    {
+        // Arrange
+        var leafCert = CreateSelfSignedCertificate("leaf.example.com");
+        var intermediateCert = CreateSelfSignedCertificate("intermediate.example.com");
+        var chain = new[] { leafCert, intermediateCert };
+        var request = CreateValidRequest();
+
+        // Act
+        var result = JwtSecuredAuthorizationRequestBuilder.Create(request)
+            .WithRsaSigningKey(_rsaPrivateKey)
+            .WithX509CertificateChain(chain)
+            .Build();
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        
+        var x5c = ExtractX5cFromJwt(result.Value.Token);
+        Assert.Equal(2, x5c.Count);
+
+        // Verify order: leaf first, then intermediate
+        var decodedLeaf = DecodeBase64Url(x5c[0]);
+        var decodedIntermediate = DecodeBase64Url(x5c[1]);
+        
+        Assert.Equal(leafCert.RawData, decodedLeaf);
+        Assert.Equal(intermediateCert.RawData, decodedIntermediate);
+    }
+
+    /// <summary>
+    /// Test 32e: x5c header is valid JSON array per RFC 7515.
+    /// Verifies x5c is array (not object) and contains base64url strings.
+    /// </summary>
+    [Fact]
+    public void Build_WithX509CertificateChain_X5cHeaderIsValidJsonArray()
+    {
+        // Arrange
+        var cert = CreateSelfSignedCertificate("test.example.com");
+        var request = CreateValidRequest();
+
+        // Act
+        var result = JwtSecuredAuthorizationRequestBuilder.Create(request)
+            .WithRsaSigningKey(_rsaPrivateKey)
+            .WithX509CertificateChain(new[] { cert })
+            .Build();
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        
+        var token = result.Value.Token;
+        var parts = token.Split('.');
+        var headerPart = parts[0];
+        
+        // Decode and parse header JSON
+        var padding = new string('=', (4 - headerPart.Length % 4) % 4);
+        var base64 = headerPart.Replace('-', '+').Replace('_', '/') + padding;
+        var headerJson = System.Text.Encoding.UTF8.GetString(
+            System.Convert.FromBase64String(base64));
+
+        using var jsonDoc = System.Text.Json.JsonDocument.Parse(headerJson);
+        var root = jsonDoc.RootElement;
+
+        // Verify x5c exists and is array
+        Assert.True(root.TryGetProperty("x5c", out var x5cElement));
+        Assert.Equal(System.Text.Json.JsonValueKind.Array, x5cElement.ValueKind);
+
+        // Verify array contains at least one base64url string
+        var arrayCount = 0;
+        foreach (var item in x5cElement.EnumerateArray())
+        {
+            Assert.Equal(System.Text.Json.JsonValueKind.String, item.ValueKind);
+            var certBase64 = item.GetString();
+            Assert.NotEmpty(certBase64);
+            
+            // Verify base64url format (no padding, no + or /)
+            Assert.DoesNotContain("+", certBase64);
+            Assert.DoesNotContain("/", certBase64);
+            Assert.DoesNotContain("=", certBase64);
+            
+            arrayCount++;
+        }
+
+        Assert.True(arrayCount > 0, "x5c array should contain at least one certificate");
+    }
+
+    /// <summary>
+    /// Test 32f: Token with x5c header is properly formatted and decodable.
+    /// Verifies JWT structure (header.payload.signature) is intact.
+    /// </summary>
+    [Fact]
+    public void Build_WithX509CertificateChain_ProducesValidSignedJWT()
+    {
+        // Arrange
+        var cert = CreateSelfSignedCertificate("test.example.com");
+        var request = CreateValidRequest();
+
+        // Act
+        var result = JwtSecuredAuthorizationRequestBuilder.Create(request)
+            .WithRsaSigningKey(_rsaPrivateKey)
+            .WithX509CertificateChain(new[] { cert })
+            .Build();
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        
+        var token = result.Value.Token;
+        var parts = token.Split('.');
+        
+        // Verify JWT structure: header.payload.signature
+        Assert.Equal(3, parts.Length);
+        Assert.NotEmpty(parts[0]); // header
+        Assert.NotEmpty(parts[1]); // payload
+        Assert.NotEmpty(parts[2]); // signature
+
+        // Verify header can be decoded
+        var headerPart = parts[0];
+        var padding = new string('=', (4 - headerPart.Length % 4) % 4);
+        var base64 = headerPart.Replace('-', '+').Replace('_', '/') + padding;
+        var headerJson = System.Text.Encoding.UTF8.GetString(
+            System.Convert.FromBase64String(base64));
+
+        // Verify it's valid JSON
+        using var jsonDoc = System.Text.Json.JsonDocument.Parse(headerJson);
+        var root = jsonDoc.RootElement;
+
+        // Verify standard JWT headers are present
+        Assert.True(root.TryGetProperty("alg", out _), "JWT should have 'alg' header");
+        Assert.True(root.TryGetProperty("typ", out _), "JWT should have 'typ' header");
+        Assert.True(root.TryGetProperty("x5c", out _), "JWT should have 'x5c' header");
+    }
+
+    #endregion
 }
