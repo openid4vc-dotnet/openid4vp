@@ -1,7 +1,7 @@
 ﻿{
   "credentials": [
     {
-      "format": "dc\u002Bsd-jwt",
+      "format": "dc+sd-jwt",
       "require_cryptographic_holder_binding": true,
       "multiple": false,
       "id": "idcard",
@@ -26,7 +26,7 @@
       }
     },
     {
-      "format": "dc\u002Bsd-jwt",
+      "format": "dc+sd-jwt",
       "require_cryptographic_holder_binding": true,
       "multiple": false,
       "id": "passport",
@@ -51,7 +51,7 @@
       }
     },
     {
-      "format": "dc\u002Bsd-jwt",
+      "format": "dc+sd-jwt",
       "require_cryptographic_holder_binding": true,
       "multiple": false,
       "id": "drivers_license",

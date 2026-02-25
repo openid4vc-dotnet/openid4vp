@@ -1,4 +1,5 @@
 using OpenID4VP.Dcql.Query.Models;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 
 namespace OpenID4VP.Dcql.Query.Serialization;
@@ -21,7 +22,7 @@ public static class DcqlQuerySerializer
         DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
 
         // + sign is ascaped to \u002B by default in System.Text.Json, which can cause issues with certain characters in query parameters.
-        // Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
     /// <summary>

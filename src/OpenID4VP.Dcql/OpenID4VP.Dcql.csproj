@@ -8,7 +8,7 @@
 
   <PropertyGroup>
     <PackageId>OpenID4VC.OpenID4VP.Dcql</PackageId>
-    <Version>1.0.0-preview.1</Version>
+    <Version>1.0.0-preview.2</Version>
     <Authors>Geert Doornbos</Authors>
     <Description>Digital Credentials Query Language (DCQL) implementation for .NET - A JSON-encoded query language for requesting Verifiable Presentations as defined in OpenID for Verifiable Presentations 1.0</Description>
     <PackageTags>DCQL;OpenID4VC;OID4VC;OpenID4VP</PackageTags>
