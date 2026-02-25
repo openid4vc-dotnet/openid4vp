@@ -108,22 +108,6 @@ public class JwtSecuredAuthorizationRequestBuilderContext
     }
 
     /// <summary>
-    /// Sets the signing key (private key for asymmetric algorithms like RS256, ES256).
-    /// This is REQUIRED. The key must match the signing algorithm.
-    /// 
-    /// DEPRECATED: Use type-specific methods instead: WithRsaSigningKey(), WithECDsaSigningKey(), or WithSymmetricSigningKey().
-    /// These methods automatically determine the algorithm from the key type and size, eliminating the need for WithAlgorithm().
-    /// </summary>
-    /// <param name="signingKey">The asymmetric security key (RSA/EC private key) for JWS signing</param>
-    /// <returns>This builder context for fluent chaining</returns>
-    [Obsolete("Use type-specific methods: WithRsaSigningKey(), WithECDsaSigningKey(), or WithSymmetricSigningKey() instead. They automatically determine the algorithm.", false)]
-    public JwtSecuredAuthorizationRequestBuilderContext WithSigningKey(SecurityKey signingKey)
-    {
-        _signingKey = signingKey;
-        return this;
-    }
-
-    /// <summary>
     /// Sets an RSA key for JWE encryption. The algorithm is automatically determined from the key size:
     /// - 2048-bit RSA → RSA-OAEP
     /// - 3072-bit RSA → RSA-OAEP
@@ -533,28 +517,11 @@ public class JwtSecuredAuthorizationRequestBuilderContext
 
         foreach (var extension in certificate.Extensions)
         {
-            if (extension.Oid?.Value == "2.5.29.17") // Subject Alternative Name OID
+            if (extension is X509SubjectAlternativeNameExtension subjectAlternativeNameExtension)
             {
-                try
+                foreach(var dns in subjectAlternativeNameExtension.EnumerateDnsNames())
                 {
-                    var sanExtension = (X509Extension)extension;
-                    var sanString = sanExtension.Format(false);
-                    
-                    // Parse SAN string looking for "DNS Name=" entries
-                    var lines = sanString.Split('\n');
-                    foreach (var line in lines)
-                    {
-                        var trimmed = line.Trim();
-                        if (trimmed.StartsWith("DNS Name="))
-                        {
-                            var dnsName = trimmed.Substring("DNS Name=".Length).Trim();
-                            dnsNames.Add(dnsName.ToLowerInvariant());
-                        }
-                    }
-                }
-                catch
-                {
-                    // Silently skip parsing errors
+                    dnsNames.Add(dns.ToLowerInvariant());
                 }
             }
         }
@@ -582,12 +549,10 @@ public class JwtSecuredAuthorizationRequestBuilderContext
     /// </summary>
     private static bool ValidateKeyCorrespondence(SecurityKey signingKey, X509Certificate2 certificate)
     {
-        var certPublicKey = certificate.PublicKey.Key;
-
         return signingKey switch
         {
-            RsaSecurityKey rsaKey => ValidateRsaKeyCorrespondence(rsaKey, certPublicKey),
-            ECDsaSecurityKey ecdsaKey => ValidateEcdsaKeyCorrespondence(ecdsaKey, certPublicKey),
+            RsaSecurityKey rsaKey => ValidateRsaKeyCorrespondence(rsaKey, certificate.GetRSAPublicKey()),
+            ECDsaSecurityKey ecdsaKey => ValidateEcdsaKeyCorrespondence(ecdsaKey, certificate.GetECDsaPublicKey()),
             _ => false // Unsupported key type
         };
     }
