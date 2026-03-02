@@ -293,54 +293,51 @@ public class JwtSecuredAuthorizationRequestBuilderContext
                 ?? new Dictionary<string, object>();
 
             // Step 2: Assemble JWT claims from request fields
-            var claims = new List<System.Security.Claims.Claim>();
+            // We need to build the JWT payload manually to preserve object types for complex fields like dcql_query
+            var payloadDict = new Dictionary<string, object>();
 
-            // Add all Authorization Request fields as claims
+            // Add all Authorization Request fields to the payload dict
             foreach (var kvp in requestDict)
             {
-                // Serialize complex objects (like dcql_query) as JSON strings
-                var claimValue = kvp.Value switch
-                {
-                    string s => s,
-                    _ => JsonSerializer.Serialize(kvp.Value, SnakeCaseOptions)
-                };
-                claims.Add(new System.Security.Claims.Claim(kvp.Key, claimValue));
+                // Keep JsonElements as-is to preserve their original structure (objects remain objects, arrays remain arrays)
+                // This ensures dcql_query remains an object instead of being stringified
+                payloadDict[kvp.Key] = kvp.Value;
             }
 
             // Add optional JWT standard claims
             if (!string.IsNullOrEmpty(_issuer))
-                claims.Add(new System.Security.Claims.Claim("iss", _issuer));
+                payloadDict["iss"] = _issuer;
 
             if (!string.IsNullOrEmpty(_audience))
-                claims.Add(new System.Security.Claims.Claim("aud", _audience));
+                payloadDict["aud"] = _audience;
 
             // Add issued at time (iat) - required for RFC 9101
             var now = DateTime.UtcNow;
-            claims.Add(new System.Security.Claims.Claim("iat", new DateTimeOffset(now).ToUnixTimeSeconds().ToString()));
+            payloadDict["iat"] = new DateTimeOffset(now).ToUnixTimeSeconds();
 
             // Add expiration time (exp)
             var expiry = now.Add(_expirationTime);
-            claims.Add(new System.Security.Claims.Claim("exp", new DateTimeOffset(expiry).ToUnixTimeSeconds().ToString()));
+            payloadDict["exp"] = new DateTimeOffset(expiry).ToUnixTimeSeconds();
 
             // Step 3: Create JWT handler and signing credentials
             var handler = new JwtSecurityTokenHandler();
             var signingCredentials = new SigningCredentials(_signingKey, _signingAlgorithm);
 
-            // Step 4: Create JWT security token (without custom header initially)
-            var token = new JwtSecurityToken(
-                issuer: _issuer,
-                audience: _audience,
-                claims: claims,
-                notBefore: now,
-                expires: expiry,
-                signingCredentials: signingCredentials);
+            // Step 4: Manually serialize the payload dict to JSON to preserve object types
+            var payloadJson = JsonSerializer.Serialize(payloadDict);
 
-            // Step 5: Set typ header parameter per RFC 9101 and OpenID4VP spec
-            // The typ header identifies this as an OAuth Authorization Request JWT
-            token.Header["typ"] = "oauth-authz-req+jwt";
-
-            // Step 5b: If certificate chain provided, add x5c header per RFC 7515
-            // and validate x509_san_dns requirements if applicable
+            // Create a custom JWT token with the full payload
+            // We need to create the JWT manually because JwtSecurityToken requires string claims
+            // but we need to preserve object types in the payload (like dcql_query being an object, not a string)
+            
+            // Create the JWT header
+            var headerDict = new Dictionary<string, object>
+            {
+                { "typ", "oauth-authz-req+jwt" },
+                { "alg", _signingAlgorithm }
+            };
+            
+            // Add x5c header if certificate chain provided
             if (_certificateChain != null && _certificateChain.Length > 0)
             {
                 // Validate x509_san_dns requirements if Client Identifier uses that prefix
@@ -356,25 +353,47 @@ public class JwtSecuredAuthorizationRequestBuilderContext
                         .TrimEnd('='))
                     .ToList();
                 
-                token.Header["x5c"] = x5cArray;
+                headerDict["x5c"] = x5cArray;
             }
 
-            // Step 6: Serialize to JWT string (JWS format)
-            var jwtToken = handler.WriteToken(token);
+            var headerJson = JsonSerializer.Serialize(headerDict);
+            
+            // Create the JWT token manually using the JwtPayload structure
+            var jwtToken = CreateSignedJwt(handler, headerJson, payloadJson, signingCredentials);
 
-            // Step 7: If encryption is configured, encrypt the JWT (JWE format)
-            // Note: JWE support requires additional configuration with JwtSecurityTokenHandler
-            // For now, we return the JWS token. Full JWE support would require:
-            // handler.EncryptingCredentials = new EncryptingCredentials(...)
-            // This is left for future implementation with proper JWE handling
+            // Create a JwtSecurityToken for the Claims property (used for validation/inspection)
+            // Build claims list for the token info object
+            var tokenInfoClaims = new List<System.Security.Claims.Claim>();
+            foreach (var kvp in payloadDict)
+            {
+                var claimValue = kvp.Value switch
+                {
+                    string s => s,
+                    long l => l.ToString(),
+                    int i => i.ToString(),
+                    JsonElement je when je.ValueKind == JsonValueKind.String => je.GetString() ?? "",
+                    _ => JsonSerializer.Serialize(kvp.Value, SnakeCaseOptions)
+                };
+                tokenInfoClaims.Add(new System.Security.Claims.Claim(kvp.Key, claimValue));
+            }
 
+            var tokenInfo = new JwtSecurityToken(
+                issuer: _issuer,
+                audience: _audience,
+                claims: tokenInfoClaims,
+                notBefore: now,
+                expires: expiry,
+                signingCredentials: signingCredentials);
+
+            tokenInfo.Header["typ"] = "oauth-authz-req+jwt";
+            
             // Step 8: Create the result
             var jar = new JwtSecuredAuthorizationRequest
             {
                 Token = jwtToken,
                 SigningAlgorithm = _signingAlgorithm,
                 IsEncrypted = _encryptionKey != null,
-                Claims = token,
+                Claims = tokenInfo,
                 EncryptionAlgorithm = _encryptionAlgorithm
             };
 
@@ -386,6 +405,101 @@ public class JwtSecuredAuthorizationRequestBuilderContext
                 $"Failed to create JWT-Secured Authorization Request: {ex.Message}",
                 "jar_creation_error");
         }
+    }
+
+    /// <summary>
+    /// Creates a signed JWT with custom payload that preserves object types (like dcql_query being an object, not a string).
+    /// </summary>
+    private static string CreateSignedJwt(JwtSecurityTokenHandler handler, string headerJson, string payloadJson, SigningCredentials signingCredentials)
+    {
+        // Encode header and payload
+        var headerBytes = System.Text.Encoding.UTF8.GetBytes(headerJson);
+        var payloadBytes = System.Text.Encoding.UTF8.GetBytes(payloadJson);
+        
+        var headerEncoded = Base64UrlEncode(headerBytes);
+        var payloadEncoded = Base64UrlEncode(payloadBytes);
+        
+        var signatureInput = $"{headerEncoded}.{payloadEncoded}";
+        var signatureInputBytes = System.Text.Encoding.UTF8.GetBytes(signatureInput);
+        
+        // Get the crypto object
+        System.Security.Cryptography.AsymmetricAlgorithm crypto;
+        if (signingCredentials.Key is RsaSecurityKey rsaKey)
+        {
+            // Use the underlying RSA object if available, otherwise create from parameters
+            crypto = rsaKey.Rsa ?? System.Security.Cryptography.RSA.Create(rsaKey.Parameters);
+        }
+        else if (signingCredentials.Key is ECDsaSecurityKey ecdsaKey)
+        {
+            // Use the underlying ECDsa object if available
+            crypto = ecdsaKey.ECDsa ?? System.Security.Cryptography.ECDsa.Create(ecdsaKey.ECDsa!.ExportParameters(false));
+        }
+        else if (signingCredentials.Key is SymmetricSecurityKey)
+        {
+            crypto = null!; // Will handle separately
+        }
+        else
+        {
+            throw new InvalidOperationException("Unsupported key type");
+        }
+
+        byte[] signatureBytes;
+        
+        try
+        {
+            if (signingCredentials.Algorithm.StartsWith("RS"))
+            {
+                // RSA signature
+                var padding = System.Security.Cryptography.RSASignaturePadding.Pkcs1;
+                var hashAlg = signingCredentials.Algorithm switch
+                {
+                    "RS256" => System.Security.Cryptography.HashAlgorithmName.SHA256,
+                    "RS384" => System.Security.Cryptography.HashAlgorithmName.SHA384,
+                    "RS512" => System.Security.Cryptography.HashAlgorithmName.SHA512,
+                    _ => throw new InvalidOperationException($"Unsupported algorithm: {signingCredentials.Algorithm}")
+                };
+                
+                signatureBytes = ((System.Security.Cryptography.RSA)crypto).SignData(signatureInputBytes, hashAlg, padding);
+            }
+            else if (signingCredentials.Algorithm.StartsWith("ES"))
+            {
+                // ECDSA signature
+                var hashAlg = signingCredentials.Algorithm switch
+                {
+                    "ES256" => System.Security.Cryptography.HashAlgorithmName.SHA256,
+                    "ES384" => System.Security.Cryptography.HashAlgorithmName.SHA384,
+                    "ES512" => System.Security.Cryptography.HashAlgorithmName.SHA512,
+                    _ => throw new InvalidOperationException($"Unsupported algorithm: {signingCredentials.Algorithm}")
+                };
+                
+                signatureBytes = ((System.Security.Cryptography.ECDsa)crypto).SignData(signatureInputBytes, hashAlg);
+            }
+            else if (signingCredentials.Algorithm == "HS256" && signingCredentials.Key is SymmetricSecurityKey symKey)
+            {
+                // HMAC signature
+                using (var hmac = new System.Security.Cryptography.HMACSHA256(symKey.Key))
+                {
+                    signatureBytes = hmac.ComputeHash(signatureInputBytes);
+                }
+            }
+            else
+            {
+                throw new InvalidOperationException($"Unsupported algorithm: {signingCredentials.Algorithm}");
+            }
+        }
+        finally
+        {
+            crypto?.Dispose();
+        }
+        
+        var signatureEncoded = Base64UrlEncode(signatureBytes);
+        return $"{signatureInput}.{signatureEncoded}";
+    }
+
+    private static string Base64UrlEncode(byte[] data)
+    {
+        var base64 = Convert.ToBase64String(data);
+        return base64.Replace('+', '-').Replace('/', '_').TrimEnd('=');
     }
 
     /// <summary>

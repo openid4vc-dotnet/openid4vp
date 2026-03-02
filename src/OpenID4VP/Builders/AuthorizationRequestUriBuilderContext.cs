@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using OpenID4VP.Models;
@@ -34,7 +35,8 @@ public class AuthorizationRequestUriBuilderContext
     {
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
         WriteIndented = false,
-        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
 
     internal AuthorizationRequestUriBuilderContext(AuthorizationRequest request)
@@ -176,6 +178,10 @@ public class AuthorizationRequestUriBuilderContext
         // OPTIONAL: request_uri_method (normalize to lowercase if provided)
         if (!string.IsNullOrEmpty(_request.RequestUriMethod))
             queryParams["request_uri_method"] = _request.RequestUriMethod.ToLowerInvariant();
+
+        // OPTIONAL: client_metadata
+        if (_request.ClientMetadata != null)
+            queryParams["client_metadata"] = JsonSerializer.Serialize(_request.ClientMetadata, SnakeCaseOptions);
 
         var uri = BuildUriWithQueryParameters(baseUri, queryParams);
         return uri;

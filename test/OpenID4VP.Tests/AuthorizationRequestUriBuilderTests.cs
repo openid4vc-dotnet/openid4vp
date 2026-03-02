@@ -1,7 +1,10 @@
-using OpenID4VP.Builders;
-using OpenID4VP.Models;
 using OpenID4VC.Core.Results;
 using OpenID4VC.Core.Tests;
+using OpenID4VP.Builders;
+using OpenID4VP.Common;
+using OpenID4VP.Dcql.Query.Builders;
+using OpenID4VP.Models;
+using System.Text.Json;
 using Xunit;
 
 namespace OpenID4VP.Tests.Builders;
@@ -398,6 +401,100 @@ public class AuthorizationRequestUriBuilderTests
         result.AssertSuccess();
         // Query string parameters should be URL encoded
         Assert.Contains("request_uri=https%3A%2F%2F", result.Value!);
+    }
+
+    [Fact]
+    public void AsRequestObjectByReference_UrlEncodesClientMetadata()
+    {
+        // Arrange
+        var request = AuthorizationRequestBuilder.Create()
+            .WithClientId("verifier-1")
+            .WithNonce("abc123")
+            .WithClientMetadata(cm => 
+            {
+                cm.WithVpFormatsSupported(new VpFormatsSupported
+                {
+                    Formats = new Dictionary<string, JsonElement>
+                    {
+                        {
+                            CredentialFormatIdentifiers.DcSdJwt,
+                            JsonSerializer.SerializeToElement(new
+                            {
+                                sd_jwt_alg_values = new[] { "ES256" },
+                                kb_jwt_alg_values = new[] { "ES256" }
+                            })
+                        }
+                    }
+                });
+            })
+            .WithRequestUri("https://verifier.example.com/request?code=abc&state=xyz")
+            .Build();
+
+        request.AssertSuccess();
+
+        // Act
+        var result = AuthorizationRequestUriBuilder.Create(request.Value)
+            .AsRequestObjectByReference("openid4vp://");
+
+        // Assert
+        result.AssertSuccess();
+        // Query string parameters should be URL encoded
+        Assert.Contains("client_metadata=%7B%22vp_formats_supported%22%3A%7B%22dc%2Bsd-jwt%22%3A%7B%22sd_jwt_alg_values%22%3A%5B%22ES256%22%5D%2C%22kb_jwt_alg_values%22%3A%5B%22ES256%22%5D%7D%7D%7D", result.Value!);
+    }
+
+    [Fact]
+    public void SerializeAuthorizationRequest_DcqlQueryIsObject_NotString()
+    {
+        // Arrange - build an authorization request with DCQL query
+        // This test demonstrates that dcql_query in AuthorizationRequest is properly typed
+        // as DcqlQuery (not string), so when serialized to JSON it becomes an object
+        var request = AuthorizationRequestBuilder.Create()
+            .WithClientId("verifier-1")
+            .WithNonce("abc123")
+            .WithResponseType("vp_token")
+            .WithResponseMode("direct_post")
+            .WithResponseUri("https://verifier.example.com/callback")
+            .WithDcql(q =>
+            {
+                q.AddMdocCredential("mdl", c =>
+                {
+                    c.WithDoctype("org.iso.18013.5.1.mDL");
+                });
+            })
+            .Build();
+
+        request.AssertSuccess();
+
+        // Act - serialize the full authorization request to JSON
+        // This would be used when returning the full request from a request_uri endpoint
+        var authRequest = request.Value!;
+        var json = JsonSerializer.Serialize(authRequest, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+            WriteIndented = false
+        });
+
+        // Assert - dcql_query must be a JSON object, not a stringified JSON string
+        // The proper JSON structure should have:
+        // { ... "dcql_query": { "credentials": [...] } ... }
+        // NOT:
+        // { ... "dcql_query": "{\"credentials\": [...]}" ... }
+        
+        Assert.NotNull(json);
+        
+        // Verify the structure by parsing and checking types
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+        
+        // dcql_query must exist and be a JSON object
+        Assert.True(root.TryGetProperty("dcql_query", out var dcqlQueryElement), 
+            "dcql_query property not found in serialized AuthorizationRequest");
+        Assert.Equal(JsonValueKind.Object, dcqlQueryElement.ValueKind); //, $"dcql_query must be a JSON object, but is {dcqlQueryElement.ValueKind}");
+        
+        // It must contain "credentials" as an array (the core DCQL structure)
+        Assert.True(dcqlQueryElement.TryGetProperty("credentials", out var credentialsElement), 
+            "credentials array not found in dcql_query object");
+        Assert.Equal(JsonValueKind.Array, credentialsElement.ValueKind);
     }
 
     #endregion

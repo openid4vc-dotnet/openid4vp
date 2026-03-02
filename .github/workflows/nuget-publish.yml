@@ -1,0 +1,73 @@
+name: Publish to NuGet
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish_core:
+        description: 'Publish OpenID4VC.OpenID4VP.Core'
+        required: true
+        default: 'true'
+        type: boolean
+      publish_dcql:
+        description: 'Publish OpenID4VC.OpenID4VP.Dcql'
+        required: true
+        default: 'true'
+        type: boolean
+      publish_vp:
+        description: 'Publish OpenID4VC.OpenID4VP'
+        required: true
+        default: 'true'
+        type: boolean
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      
+      - name: Restore dependencies
+        run: dotnet restore
+        working-directory: ./openid4vp
+      
+      - name: Run tests
+        run: dotnet test --no-restore --verbosity normal
+        working-directory: ./openid4vp
+      
+      - name: Build projects
+        run: dotnet build --configuration Release --no-restore
+        working-directory: ./openid4vp
+      
+      - name: Pack OpenID4VC.Core
+        if: inputs.publish_core
+        run: dotnet pack src/OpenID4VC.Core/OpenID4VC.Core.csproj --configuration Release --output ./nupkg --no-build
+        working-directory: ./openid4vp
+      
+      - name: Pack OpenID4VP.Dcql
+        if: inputs.publish_dcql
+        run: dotnet pack src/OpenID4VP.Dcql/OpenID4VP.Dcql.csproj --configuration Release --output ./nupkg --no-build
+        working-directory: ./openid4vp
+      
+      - name: Pack OpenID4VP
+        if: inputs.publish_vp
+        run: dotnet pack src/OpenID4VP/OpenID4VP.csproj --configuration Release --output ./nupkg --no-build
+        working-directory: ./openid4vp
+      
+      - name: Publish to NuGet
+        run: |
+          for package in ./nupkg/*.nupkg; do
+            echo "Publishing: $package"
+            dotnet nuget push "$package" \
+              --api-key ${{ secrets.NUGET_API_KEY }} \
+              --source https://api.nuget.org/v3/index.json \
+              --skip-duplicate
+          done
+        working-directory: ./openid4vp

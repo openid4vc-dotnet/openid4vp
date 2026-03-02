@@ -20,7 +20,7 @@ public sealed class ClientMetadataBuilderContext
     private string? _jwksUri;
     private JsonElement? _jwks;
     private List<string>? _encryptedResponseEncValues;
-    private JsonElement? _vpFormatsSupported;
+    private VpFormatsSupported? _vpFormatsSupported;
     private Dictionary<string, JsonElement>? _extensionData;
     private readonly List<Error> _errors = [];
 
@@ -197,7 +197,7 @@ public sealed class ClientMetadataBuilderContext
     /// <summary>
     /// Sets the supported VP formats for this Verifier.
     /// </summary>
-    public ClientMetadataBuilderContext WithVpFormatsSupported(JsonElement vpFormatsSupported)
+    public ClientMetadataBuilderContext WithVpFormatsSupported(VpFormatsSupported? vpFormatsSupported)
     {
         _vpFormatsSupported = vpFormatsSupported;
         return this;

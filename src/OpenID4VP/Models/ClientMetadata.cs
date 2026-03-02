@@ -65,12 +65,12 @@ public sealed record ClientMetadata
     public IReadOnlyList<string>? EncryptedResponseEncValuesSupported { get; init; }
 
     /// <summary>
-    /// OPTIONAL. A JSON object mapping Credential Format Identifiers to their supported parameters.
+    /// OPTIONAL. A model mapping Credential Format Identifiers to their supported parameters.
     /// Required when not available via other mechanism.
     /// Specification: Section 5.1
     /// </summary>
     [JsonPropertyName("vp_formats_supported")]
-    public JsonElement? VpFormatsSupported { get; init; }
+    public VpFormatsSupported? VpFormatsSupported { get; init; }
 
     /// <summary>
     /// Additional metadata fields not defined in this specification.

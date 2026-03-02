@@ -1,6 +1,7 @@
 using Microsoft.IdentityModel.Tokens;
 using OpenID4VP.Builders;
 using OpenID4VP.Models;
+using OpenID4VP.Dcql.Query.Builders;
 using Xunit;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Cryptography;
@@ -25,6 +26,7 @@ public class JwtSecuredAuthorizationRequestBuilderTests : IDisposable
     private readonly RSA _rsa;
     private readonly RsaSecurityKey _rsaPrivateKey;
     private readonly RsaSecurityKey _rsaPublicKey;
+    private readonly RSAParameters _rsaParameters;
 
     public JwtSecuredAuthorizationRequestBuilderTests()
     {
@@ -32,11 +34,25 @@ public class JwtSecuredAuthorizationRequestBuilderTests : IDisposable
         _rsa = RSA.Create();
         _rsaPrivateKey = new RsaSecurityKey(_rsa) { KeyId = "test-key-1" };
         _rsaPublicKey = new RsaSecurityKey(_rsa.ExportParameters(false)) { KeyId = "test-key-1" };
+        // Cache RSA parameters to avoid issues with disposed RSA objects
+        _rsaParameters = _rsa.ExportParameters(true);
     }
 
     public void Dispose()
     {
         _rsa?.Dispose();
+    }
+    
+    /// <summary>
+    /// Helper to create a fresh RsaSecurityKey for each build call.
+    /// This avoids issues where the builder might dispose the RSA object.
+    /// </summary>
+    private RsaSecurityKey CreateFreshRsaSigningKey()
+    {
+        // Create a new RSA object from the cached parameters instead of reusing _rsa
+        var rsa = RSA.Create();
+        rsa.ImportParameters(_rsaParameters);
+        return new RsaSecurityKey(rsa) { KeyId = "test-key-1" };
     }
 
     /// <summary>
@@ -50,9 +66,14 @@ public class JwtSecuredAuthorizationRequestBuilderTests : IDisposable
             .WithResponseType("vp_token")
             .WithResponseMode("query")
             .WithRedirectUri("https://verifier.example.com/callback")
-            .WithScope("openid")
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", ConfigureValidW3cCredential))
             .Build()
             .Value;
+    }
+
+    private static void ConfigureValidW3cCredential(W3cVcCredentialQueryBuilder builder)
+    {
+        builder.AddTypeValues("UniversityDegree");
     }
 
     /// <summary>
@@ -356,19 +377,19 @@ public class JwtSecuredAuthorizationRequestBuilderTests : IDisposable
 
         // Act
         var result1 = JwtSecuredAuthorizationRequestBuilder.Create(request)
-            .WithRsaSigningKey(_rsaPrivateKey)
+            .WithRsaSigningKey(CreateFreshRsaSigningKey())
             .Build();
 
         // Small delay to ensure different iat/exp times
         System.Threading.Thread.Sleep(50);
 
         var result2 = JwtSecuredAuthorizationRequestBuilder.Create(request)
-            .WithRsaSigningKey(_rsaPrivateKey)
+            .WithRsaSigningKey(CreateFreshRsaSigningKey())
             .Build();
 
         // Assert
-        Assert.True(result1.IsSuccess);
-        Assert.True(result2.IsSuccess);
+        Assert.True(result1.IsSuccess, $"Result 1 failed: {string.Join(", ", result1.Errors.Select(e => e.Message))}");
+        Assert.True(result2.IsSuccess, $"Result 2 failed: {string.Join(", ", result2.Errors.Select(e => e.Message))}");
         // Tokens MAY be the same if generated within same second (iat/exp are truncated to seconds)
         // So we just check that both are valid, not necessarily different
         Assert.NotEmpty(result1.Value.Token);
@@ -1076,6 +1097,85 @@ public class JwtSecuredAuthorizationRequestBuilderTests : IDisposable
         Assert.True(root.TryGetProperty("alg", out _), "JWT should have 'alg' header");
         Assert.True(root.TryGetProperty("typ", out _), "JWT should have 'typ' header");
         Assert.True(root.TryGetProperty("x5c", out _), "JWT should have 'x5c' header");
+    }
+
+    /// <summary>
+    /// Test: Verify JWT payload contains all authorization request fields correctly serialized.
+    /// </summary>
+    [Fact]
+    public void Build_ValidatesJwtPayloadStructure()
+    {
+        // Arrange
+        var request = CreateValidRequest();
+
+        // Act
+        var result = JwtSecuredAuthorizationRequestBuilder.Create(request)
+            .WithRsaSigningKey(_rsaPrivateKey)
+            .WithIssuer("verifier-1")
+            .WithAudience("https://wallet.example.com")
+            .Build();
+
+        // Assert
+        Assert.True(result.IsSuccess, $"Build failed: {string.Join("; ", result.Errors.Select(e => e.Message))}");
+        
+        // Decode the JWT payload
+        var token = result.Value.Token;
+        var parts = token.Split('.');
+        var payloadPart = parts[1];
+        
+        // Base64url decode the payload
+        var padding = new string('=', (4 - payloadPart.Length % 4) % 4);
+        var base64 = payloadPart.Replace('-', '+').Replace('_', '/') + padding;
+        var payloadJson = System.Text.Encoding.UTF8.GetString(System.Convert.FromBase64String(base64));
+        
+        // Parse JSON and verify payload structure
+        using var jsonDoc = System.Text.Json.JsonDocument.Parse(payloadJson);
+        var root = jsonDoc.RootElement;
+        
+        // Verify standard JWT claims
+        Assert.True(root.TryGetProperty("iss", out var issElement), "Payload should contain 'iss' claim");
+        Assert.Equal("verifier-1", issElement.GetString());
+        
+        Assert.True(root.TryGetProperty("aud", out var audElement), "Payload should contain 'aud' claim");
+        // aud can be either a string or an array, handle both cases
+        if (audElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+        {
+            var audArray = audElement.EnumerateArray().ToList();
+            Assert.NotEmpty(audArray);
+            Assert.Equal("https://wallet.example.com", audArray[0].GetString());
+        }
+        else
+        {
+            Assert.Equal("https://wallet.example.com", audElement.GetString());
+        }
+        
+        Assert.True(root.TryGetProperty("iat", out _), "Payload should contain 'iat' claim");
+        Assert.True(root.TryGetProperty("exp", out _), "Payload should contain 'exp' claim");
+        
+        // Verify authorization request fields
+        Assert.True(root.TryGetProperty("client_id", out var clientIdElement), "Payload should contain 'client_id'");
+        Assert.Equal("verifier-1", clientIdElement.GetString());
+        
+        Assert.True(root.TryGetProperty("nonce", out var nonceElement), "Payload should contain 'nonce'");
+        Assert.Equal("abc123xyz", nonceElement.GetString());
+        
+        Assert.True(root.TryGetProperty("response_type", out var responseTypeElement), "Payload should contain 'response_type'");
+        Assert.Equal("vp_token", responseTypeElement.GetString());
+        
+        Assert.True(root.TryGetProperty("response_mode", out var responseModeElement), "Payload should contain 'response_mode'");
+        Assert.Equal("query", responseModeElement.GetString());
+        
+        Assert.True(root.TryGetProperty("redirect_uri", out var redirectUriElement), "Payload should contain 'redirect_uri'");
+        Assert.Equal("https://verifier.example.com/callback", redirectUriElement.GetString());
+        
+        // Verify dcql_query is present and is a JSON object (not a string)
+        Assert.True(root.TryGetProperty("dcql_query", out var dcqlElement), "Payload should contain 'dcql_query'");
+        Assert.Equal(System.Text.Json.JsonValueKind.Object, dcqlElement.ValueKind);
+        
+        // Verify dcql_query structure
+        Assert.True(dcqlElement.TryGetProperty("credentials", out var credentialsElement), "dcql_query should contain 'credentials'");
+        Assert.Equal(System.Text.Json.JsonValueKind.Array, credentialsElement.ValueKind);
+        Assert.True(credentialsElement.GetArrayLength() > 0, "credentials array should not be empty");
     }
 
     #endregion

@@ -1,8 +1,9 @@
+using OpenID4VC.Core.Results;
+using OpenID4VP.Models;
+using OpenID4VP.Validators;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using OpenID4VP.Models;
-using OpenID4VC.Core.Results;
-using OpenID4VP.Validators;
 
 namespace OpenID4VP.Builders;
 
@@ -32,7 +33,8 @@ public class AuthorizationRequestBodyBuilderContext
     {
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
         WriteIndented = false,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
 
     internal AuthorizationRequestBodyBuilderContext(AuthorizationRequest request)
