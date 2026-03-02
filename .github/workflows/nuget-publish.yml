@@ -36,30 +36,24 @@ jobs:
       
       - name: Restore dependencies
         run: dotnet restore
-        working-directory: ./openid4vp
       
       - name: Run tests
         run: dotnet test --no-restore --verbosity normal
-        working-directory: ./openid4vp
       
       - name: Build projects
         run: dotnet build --configuration Release --no-restore
-        working-directory: ./openid4vp
       
       - name: Pack OpenID4VC.Core
         if: inputs.publish_core
         run: dotnet pack src/OpenID4VC.Core/OpenID4VC.Core.csproj --configuration Release --output ./nupkg --no-build
-        working-directory: ./openid4vp
       
       - name: Pack OpenID4VP.Dcql
         if: inputs.publish_dcql
         run: dotnet pack src/OpenID4VP.Dcql/OpenID4VP.Dcql.csproj --configuration Release --output ./nupkg --no-build
-        working-directory: ./openid4vp
       
       - name: Pack OpenID4VP
         if: inputs.publish_vp
         run: dotnet pack src/OpenID4VP/OpenID4VP.csproj --configuration Release --output ./nupkg --no-build
-        working-directory: ./openid4vp
       
       - name: Publish to NuGet
         run: |
@@ -70,4 +64,3 @@ jobs:
               --source https://api.nuget.org/v3/index.json \
               --skip-duplicate
           done
-        working-directory: ./openid4vp
