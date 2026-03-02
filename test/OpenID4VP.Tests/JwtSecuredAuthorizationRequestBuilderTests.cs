@@ -999,7 +999,8 @@ public class JwtSecuredAuthorizationRequestBuilderTests : IDisposable
 
     /// <summary>
     /// Test 32e: x5c header is valid JSON array per RFC 7515.
-    /// Verifies x5c is array (not object) and contains base64url strings.
+    /// Verifies x5c is array (not object) and contains base64 strings (not base64url).
+    /// Per RFC 7515 Section 4.1.6, x5c contains base64-encoded DER certificates.
     /// </summary>
     [Fact]
     public void Build_WithX509CertificateChain_X5cHeaderIsValidJsonArray()
@@ -1021,7 +1022,7 @@ public class JwtSecuredAuthorizationRequestBuilderTests : IDisposable
         var parts = token.Split('.');
         var headerPart = parts[0];
         
-        // Decode and parse header JSON
+        // Decode and parse header JSON (header itself uses base64url)
         var padding = new string('=', (4 - headerPart.Length % 4) % 4);
         var base64 = headerPart.Replace('-', '+').Replace('_', '/') + padding;
         var headerJson = System.Text.Encoding.UTF8.GetString(
@@ -1034,7 +1035,7 @@ public class JwtSecuredAuthorizationRequestBuilderTests : IDisposable
         Assert.True(root.TryGetProperty("x5c", out var x5cElement));
         Assert.Equal(System.Text.Json.JsonValueKind.Array, x5cElement.ValueKind);
 
-        // Verify array contains at least one base64url string
+        // Verify array contains at least one base64 string (not base64url)
         var arrayCount = 0;
         foreach (var item in x5cElement.EnumerateArray())
         {
@@ -1042,10 +1043,19 @@ public class JwtSecuredAuthorizationRequestBuilderTests : IDisposable
             var certBase64 = item.GetString();
             Assert.NotEmpty(certBase64);
             
-            // Verify base64url format (no padding, no + or /)
-            Assert.DoesNotContain("+", certBase64);
-            Assert.DoesNotContain("/", certBase64);
-            Assert.DoesNotContain("=", certBase64);
+            // Verify it can be decoded as standard base64 (RFC 7515 requires this)
+            byte[] decodedDer = null;
+            try
+            {
+                decodedDer = System.Convert.FromBase64String(certBase64);
+            }
+            catch (Exception ex)
+            {
+                Assert.False(true, $"Failed to decode x5c as standard base64: {ex.Message}");
+            }
+            
+            Assert.NotNull(decodedDer);
+            Assert.NotEmpty(decodedDer);
             
             arrayCount++;
         }
@@ -1176,6 +1186,141 @@ public class JwtSecuredAuthorizationRequestBuilderTests : IDisposable
         Assert.True(dcqlElement.TryGetProperty("credentials", out var credentialsElement), "dcql_query should contain 'credentials'");
         Assert.Equal(System.Text.Json.JsonValueKind.Array, credentialsElement.ValueKind);
         Assert.True(credentialsElement.GetArrayLength() > 0, "credentials array should not be empty");
+    }
+
+    /// <summary>
+    /// Test 32g: x5c certificate data is valid base64 (not base64url) and decodable.
+    /// Comprehensive validation that x5c header can be extracted and decoded without errors.
+    /// Per RFC 7515 Section 4.1.6, x5c uses standard base64 encoding (with + / and = padding if present).
+    /// </summary>
+    [Fact]
+    public void Build_WithX509CertificateChain_X5cDataIsValidBase64()
+    {
+        // Arrange
+        var cert = CreateSelfSignedCertificate("test.example.com");
+        var request = CreateValidRequest();
+        
+        // Act
+        var result = JwtSecuredAuthorizationRequestBuilder.Create(request)
+            .WithRsaSigningKey(CreateFreshRsaSigningKey())
+            .WithX509CertificateChain(new[] { cert })
+            .Build();
+        
+        // Assert - Build success
+        Assert.True(result.IsSuccess);
+        
+        var token = result.Value.Token;
+        var x5cCerts = ExtractX5cFromJwt(token);
+        
+        // Verify x5c array is not empty
+        Assert.NotEmpty(x5cCerts);
+        Assert.Single(x5cCerts);
+        
+        var x5cCertData = x5cCerts[0];
+        
+        // Test 1: x5c string should not be empty
+        Assert.NotEmpty(x5cCertData);
+        
+        // Test 2: Decode standard base64 and verify it produces valid DER bytes
+        // Per RFC 7515, x5c uses standard base64 (not base64url)
+        byte[] decodedDer = null;
+        try
+        {
+            decodedDer = Convert.FromBase64String(x5cCertData);
+        }
+        catch (Exception ex)
+        {
+            Assert.False(true, $"Failed to decode x5c as standard base64: {ex.Message}");
+        }
+        
+        // Test 3: Verify decoded bytes match original certificate DER
+        Assert.NotNull(decodedDer);
+        Assert.NotEmpty(decodedDer);
+        Assert.True(cert.RawData.SequenceEqual(decodedDer),
+            "Decoded x5c bytes should match original certificate DER");
+        
+        // Test 4: Load certificate from decoded DER
+        X509Certificate2 decodedCert = null;
+        try
+        {
+            decodedCert = new X509Certificate2(decodedDer);
+        }
+        catch (Exception ex)
+        {
+            Assert.False(true, $"Failed to load X509Certificate2 from decoded x5c: {ex.Message}");
+        }
+        
+        Assert.NotNull(decodedCert);
+    }
+
+    /// <summary>
+    /// Test 32h: x5c header with multiple certificates maintains proper base64 encoding.
+    /// Validates each certificate in the chain is properly base64 encoded (per RFC 7515 Section 4.1.6).
+    /// </summary>
+    [Fact]
+    public void Build_WithMultipleCertificates_AllX5cEntriesValidBase64()
+    {
+        // Arrange - Create certificate chain
+        var leafCert = CreateSelfSignedCertificate("leaf.example.com");
+        var intermediateCert = CreateSelfSignedCertificate("intermediate.example.com");
+        var request = CreateValidRequest();
+        
+        // Act
+        var result = JwtSecuredAuthorizationRequestBuilder.Create(request)
+            .WithRsaSigningKey(CreateFreshRsaSigningKey())
+            .WithX509CertificateChain(new[] { leafCert, intermediateCert })
+            .Build();
+        
+        // Assert
+        Assert.True(result.IsSuccess);
+        
+        var token = result.Value.Token;
+        var x5cCerts = ExtractX5cFromJwt(token);
+        
+        // Verify we have 2 certificates
+        Assert.Equal(2, x5cCerts.Count);
+        
+        // Validate each certificate entry
+        for (int i = 0; i < x5cCerts.Count; i++)
+        {
+            var x5cCertData = x5cCerts[i];
+            
+            // Decode standard base64 and verify
+            byte[] decodedDer = null;
+            try
+            {
+                decodedDer = Convert.FromBase64String(x5cCertData);
+            }
+            catch (Exception ex)
+            {
+                Assert.False(true, 
+                    $"Certificate {i}: Failed to decode as standard base64 - {ex.Message}");
+            }
+            
+            Assert.NotNull(decodedDer);
+            Assert.NotEmpty(decodedDer);
+            
+            // Verify it's a valid certificate
+            try
+            {
+                var decoded = new X509Certificate2(decodedDer);
+                Assert.NotNull(decoded);
+            }
+            catch (Exception ex)
+            {
+                Assert.False(true, $"Certificate {i}: Not valid X509 - {ex.Message}");
+            }
+        }
+        
+        // Verify leaf is first and intermediate is second
+        var leafDer = Convert.FromBase64String(x5cCerts[0]);
+        var leafFromX5c = new X509Certificate2(leafDer);
+        
+        var intermediateDer = Convert.FromBase64String(x5cCerts[1]);
+        var intermediateFromX5c = new X509Certificate2(intermediateDer);
+        
+        Assert.Equal(leafCert.Thumbprint, leafFromX5c.Thumbprint);
+        Assert.Equal(intermediateCert.Thumbprint, intermediateFromX5c.Thumbprint);
     }
 
     #endregion

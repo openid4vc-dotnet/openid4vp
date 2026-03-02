@@ -1,14 +1,15 @@
+using Microsoft.IdentityModel.Tokens;
+using OpenID4VC.Core.Results;
+using OpenID4VP.Dcql.Query.Serialization;
+using OpenID4VP.Models;
+using OpenID4VP.Validators;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
+using System.Runtime.ConstrainedExecution;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Microsoft.IdentityModel.Tokens;
-using OpenID4VP.Models;
-using OpenID4VC.Core.Results;
-using OpenID4VP.Validators;
-using OpenID4VP.Dcql.Query.Serialization;
 
 namespace OpenID4VP.Builders;
 
@@ -345,14 +346,11 @@ public class JwtSecuredAuthorizationRequestBuilderContext
                 if (!x509ValidationResult.IsSuccess)
                     return Result<JwtSecuredAuthorizationRequest>.Failure(x509ValidationResult.Errors.ToArray());
 
-                // Add x5c header: array of base64url-encoded DER certificates
+                // Add x5c header: array of base64-encoded (not base64url) DER certificates per RFC 7515 Section 4.1.6
                 var x5cArray = _certificateChain
-                    .Select(cert => Convert.ToBase64String(cert.RawData)
-                        .Replace('+', '-')
-                        .Replace('/', '_')
-                        .TrimEnd('='))
+                    .Select(cert => Convert.ToBase64String(cert.RawData))
                     .ToList();
-                
+
                 headerDict["x5c"] = x5cArray;
             }
 
