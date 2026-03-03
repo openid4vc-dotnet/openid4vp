@@ -134,7 +134,7 @@ public sealed class AuthorizationRequestBuilder
 
     /// <summary>
     /// Sets the response mode. REQUIRED.
-    /// Valid values: "fragment", "query", "direct_post", "direct_post.jwt"
+    /// Valid values: "fragment", "query", "direct_post", "direct_post.jwt", "dc_api.jwt"
     /// </summary>
     public AuthorizationRequestBuilder WithResponseMode(string? responseMode)
     {

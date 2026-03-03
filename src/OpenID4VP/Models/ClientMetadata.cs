@@ -8,7 +8,7 @@ namespace OpenID4VP.Models;
 /// 
 /// Contains information about the Verifier that the Wallet should know about, including:
 /// - Basic identification (client_name, logo_uri, jwks_uri)
-/// - Public keys for signature verification (jwks)
+/// - Public keys for encrypting the authorization response (jwks) - the Wallet uses these to encrypt the VP Token returned in the response
 /// - Response encryption preferences (encrypted_response_enc_values_supported)
 /// - Supported VP formats (vp_formats_supported)
 /// - Additional metadata fields for extensibility
@@ -44,9 +44,11 @@ public sealed record ClientMetadata
 
     /// <summary>
     /// OPTIONAL. A JSON Web Key Set (JWKS) containing one or more public keys.
-    /// May be used by the Wallet for encryption of the Authorization Response,
-    /// to generate Verifiable Presentations, or to verify signatures on Authorization Requests (JAR).
-    /// Each JWK in the set MUST have a "kid" (Key ID) parameter.
+    /// These public keys are used by the Wallet to encrypt the VP Token in the authorization response.
+    /// The Wallet uses the "kid" (Key ID) parameter to identify which key to use for encryption,
+    /// and the "alg" (Algorithm) parameter to determine which encryption algorithm to apply.
+    /// 
+    /// Each JWK in the set MUST have both "kid" and "alg" parameters.
     /// 
     /// IMPORTANT: Must contain ONLY public keys. Private keys should never be included.
     /// Specification: Section 5.1

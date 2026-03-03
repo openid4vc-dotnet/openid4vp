@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.IdentityModel.Tokens.Jwt;
 using Microsoft.IdentityModel.Tokens;
 using OpenID4VP.Builders;
 using OpenID4VP.Common;
@@ -833,6 +834,201 @@ public class AuthorizationRequestBuilderTests
         // Assert
         var errors = result.AssertError();
         Assert.Contains(errors, e => e.Message.Contains("Unsupported key type"));
+    }
+
+    [Fact]
+    public void WithClientMetadata_WithRsaPublicKey_IncludesKidAndAlgInJwks()
+    {
+        // Arrange
+        using var rsa = RSA.Create(2048);
+        var rsaKey = new RsaSecurityKey(rsa);
+
+        // Act
+        var result = AuthorizationRequestBuilder.Create()
+            .WithResponseType(ResponseTypes.VpToken)
+            .WithClientId("https://verifier.example.com")
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.com/callback")
+            .WithClientMetadata(metadata => metadata
+                .WithName("Test Verifier")
+                .WithPublicKeysFromRsaPrivateKey(rsaKey))
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
+
+        // Assert
+        var request = result.AssertSuccess();
+        Assert.NotNull(request.ClientMetadata);
+        
+        // Verify JWKS is present and contains kid and alg
+        var metadata = request.ClientMetadata;
+        Assert.NotNull(metadata.Jwks);
+        
+        // Parse JWKS JSON
+        using var jsonDoc = System.Text.Json.JsonDocument.Parse(metadata.Jwks.ToString()!);
+        var root = jsonDoc.RootElement;
+        
+        Assert.True(root.TryGetProperty("keys", out var keysElement), "JWKS should have 'keys' array");
+        Assert.Equal(System.Text.Json.JsonValueKind.Array, keysElement.ValueKind);
+        
+        var keyCount = 0;
+        foreach (var keyElement in keysElement.EnumerateArray())
+        {
+            keyCount++;
+            
+            // Verify each key has a 'kid' property
+            Assert.True(keyElement.TryGetProperty("kid", out var kidElement), 
+                "Each key in JWKS must have a 'kid' (Key ID) property");
+            Assert.NotEqual(System.Text.Json.JsonValueKind.Null, kidElement.ValueKind);
+            var kidValue = kidElement.GetString();
+            Assert.False(string.IsNullOrWhiteSpace(kidValue), "kid value must not be empty");
+            
+            // Verify each key has an 'alg' property
+            Assert.True(keyElement.TryGetProperty("alg", out var algElement), 
+                "Each key in JWKS must have an 'alg' (Algorithm) property");
+            Assert.NotEqual(System.Text.Json.JsonValueKind.Null, algElement.ValueKind);
+            var algValue = algElement.GetString();
+            Assert.False(string.IsNullOrWhiteSpace(algValue), "alg value must not be empty");
+            Assert.Equal("RSA-OAEP", algValue);  // Encryption algorithm for RSA
+            
+            // Verify the key has 'use' set to 'enc' (encryption)
+            Assert.True(keyElement.TryGetProperty("use", out var useElement),
+                "Each key in JWKS must have a 'use' (Key Usage) property");
+            Assert.Equal("enc", useElement.GetString());
+        }
+        
+        Assert.Equal(1, keyCount);
+    }
+
+    [Fact]
+    public void WithClientMetadata_WithJwksWithoutKidOrAlg_ReturnsError()
+    {
+        // Arrange - Create a JWKS with a key that has NO kid and NO alg
+        var jwks = new JsonWebKeySet();
+        
+        using var rsa = RSA.Create(2048);
+        using var publicRsa = RSA.Create();
+        publicRsa.ImportParameters(rsa.ExportParameters(false)); // Export only public key
+        var rsaKey = new RsaSecurityKey(publicRsa);
+        
+        var jwk = JsonWebKeyConverter.ConvertFromRSASecurityKey(rsaKey);
+        // Explicitly clear the KeyId and Alg to simulate missing required fields
+        jwk.KeyId = null;
+        jwk.Alg = null;
+        jwks.Keys.Add(jwk);
+
+        // Act
+        var result = AuthorizationRequestBuilder.Create()
+            .WithResponseType(ResponseTypes.VpToken)
+            .WithClientId("https://verifier.example.com")
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.Fragment)
+            .WithRedirectUri("https://verifier.example.com/callback")
+            .WithClientMetadata(metadata => metadata
+                .WithName("Test Verifier")
+                .WithJwks(jwks))
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .Build();
+
+        // Assert
+        var errors = result.AssertError();
+        // Validation returns on first error (either missing kid or alg), so we'll just check for at least one
+        Assert.True(errors.Length >= 1, "Should have at least one validation error");
+        var errorMessage = string.Join(", ", errors.Select(e => e.Message));
+        // Either kid or alg error should be present (but not both in a single check since validation returns early)
+        Assert.True(errorMessage.Contains("'kid'") || errorMessage.Contains("'alg'"), 
+            $"Error should mention 'kid' or 'alg', but got: {errorMessage}");
+    }
+
+    [Fact]
+    public void WithPublicKeysFromRsaPrivateKey_WithDefaultA128GCM_ShouldNotAddToEncValues()
+    {
+        // Per spec: A128GCM is the default and SHOULD be absent from EncryptedResponseEncValuesSupported
+        // This test verifies that when using keys that derive to A128GCM (default),
+        // it is NOT added to the EncryptedResponseEncValuesSupported list
+        
+        // Arrange - 2048-bit RSA derives to A128GCM (the default)
+        using var rsa = RSA.Create(2048);
+        var rsaKey = new RsaSecurityKey(rsa);
+
+        // Act
+        var result = AuthorizationRequestBuilder.Create()
+            .WithResponseType(ResponseTypes.VpToken)
+            .WithClientId("https://verifier.example.com")
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.DirectPostJwt)  // Encrypted mode
+            .WithResponseUri("https://verifier.example.com/response")
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .WithClientMetadata(metadata => metadata
+                .WithName("Test Verifier")
+                .WithPublicKeysFromRsaPrivateKey(rsaKey))  // Uses 2048-bit RSA -> A128GCM
+            .Build();
+
+        // Assert
+        var request = result.AssertSuccess();
+        // A128GCM (default) SHOULD be absent from EncryptedResponseEncValuesSupported
+        Assert.Null(request.ClientMetadata?.EncryptedResponseEncValuesSupported);
+    }
+
+    [Fact]
+    public void WithPublicKeysFromEcdsaPrivateKey_WithDefaultA128GCM_ShouldNotAddToEncValues()
+    {
+        // Per spec: A128GCM is the default and SHOULD be absent from EncryptedResponseEncValuesSupported
+        // This test verifies that when using keys that derive to A128GCM (default),
+        // it is NOT added to the EncryptedResponseEncValuesSupported list
+        
+        // Arrange - P-256 ECDSA derives to A128GCM (the default)
+        using var ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var ecdsaKey = new ECDsaSecurityKey(ecdsa);
+
+        // Act
+        var result = AuthorizationRequestBuilder.Create()
+            .WithResponseType(ResponseTypes.VpToken)
+            .WithClientId("https://verifier.example.com")
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.DirectPostJwt)  // Encrypted mode
+            .WithResponseUri("https://verifier.example.com/response")
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .WithClientMetadata(metadata => metadata
+                .WithName("Test Verifier")
+                .WithPublicKeysFromEcdsaPrivateKey(ecdsaKey))  // Uses P-256 ECDSA -> A128GCM
+            .Build();
+
+        // Assert
+        var request = result.AssertSuccess();
+        // A128GCM (default) SHOULD be absent from EncryptedResponseEncValuesSupported
+        Assert.Null(request.ClientMetadata?.EncryptedResponseEncValuesSupported);
+    }
+
+    [Fact]
+    public void WithPublicKeysFromRsaPrivateKey_WithNonDefaultA192GCM_ShouldAddToEncValues()
+    {
+        // Verify contrast: When using keys that derive to non-default values (A192GCM or A256GCM),
+        // they SHOULD be added to EncryptedResponseEncValuesSupported
+        
+        // Arrange - 3072-bit RSA derives to A192GCM (non-default)
+        using var rsa = RSA.Create(3072);
+        var rsaKey = new RsaSecurityKey(rsa);
+
+        // Act
+        var result = AuthorizationRequestBuilder.Create()
+            .WithResponseType(ResponseTypes.VpToken)
+            .WithClientId("https://verifier.example.com")
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.DirectPostJwt)  // Encrypted mode
+            .WithResponseUri("https://verifier.example.com/response")
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .WithClientMetadata(metadata => metadata
+                .WithName("Test Verifier")
+                .WithPublicKeysFromRsaPrivateKey(rsaKey))  // Uses 3072-bit RSA -> A192GCM
+            .Build();
+
+        // Assert
+        var request = result.AssertSuccess();
+        // A192GCM (non-default) SHOULD be present in EncryptedResponseEncValuesSupported
+        Assert.NotNull(request.ClientMetadata?.EncryptedResponseEncValuesSupported);
+        Assert.Single(request.ClientMetadata.EncryptedResponseEncValuesSupported);
+        Assert.Equal("A192GCM", request.ClientMetadata.EncryptedResponseEncValuesSupported[0]);
     }
 
     #endregion

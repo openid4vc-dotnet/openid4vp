@@ -25,4 +25,9 @@ public static class ResponseModes
     /// Response parameters are encrypted and sent as an HTTP POST request to the response_uri
     /// </summary>
     public const string DirectPostJwt = "direct_post.jwt";
+
+    /// <summary>
+    /// Response parameters are encrypted and sent via the Direct Communication API endpoint
+    /// </summary>
+    public const string DcApiJwt = "dc_api.jwt";
 }

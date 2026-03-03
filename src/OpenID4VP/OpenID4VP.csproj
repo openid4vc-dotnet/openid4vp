@@ -8,7 +8,7 @@
 
   <PropertyGroup>
     <PackageId>OpenID4VC.OpenID4VP</PackageId>
-    <Version>1.0.0-preview.8</Version>
+    <Version>1.0.0-preview.9</Version>
     <Authors>Geert Doornbos</Authors>
     <Description>OpenID for Verifiable Presentations implementation for .NET</Description>
     <PackageTags>OpenID4VC;OID4VC;OpenID4VP</PackageTags>

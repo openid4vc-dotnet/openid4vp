@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using Microsoft.IdentityModel.Tokens;
 using OpenID4VP.Builders;
 using OpenID4VP.Common;
 using OpenID4VP.Models;
@@ -311,5 +313,38 @@ public class AuthorizationRequestValidatorTests
         var result = _validator.Validate(request);
 
         Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public void Validate_EncryptedModeWithoutExplicitEncValues_UsesDefaultA128GCM_IsValid()
+    {
+        // Per spec: "When a response_mode requiring encryption of the Response (such as dc_api.jwt or direct_post.jwt) 
+        // is specified, this MUST be present for anything other than the default single value of A128GCM. Otherwise, 
+        // this SHOULD be absent."
+        // This test verifies that encrypted response modes are valid without explicit enc values (using default A128GCM)
+        using var rsa = RSA.Create(2048);
+        var rsaKey = new RsaSecurityKey(rsa);
+        var jwks = JwksBuilder.CreatePublicKeySet(rsaKey, keyUsage: "enc");
+
+        var buildResult = AuthorizationRequestBuilder.Create()
+            .WithResponseType(ResponseTypes.VpToken)
+            .WithClientId("https://verifier.example.com")
+            .WithNonce("n-0S6_WzA2Mj")
+            .WithResponseMode(ResponseModes.DirectPostJwt)  // Requires encryption
+            .WithResponseUri("https://verifier.example.com/response")
+            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
+            .WithClientMetadata(metadata => metadata
+                .WithName("Test Verifier")
+                .WithJwks(jwks))  // No explicit enc values
+            .Build();
+        var request = buildResult.Value!;
+
+        var result = _validator.Validate(request);
+
+        // Should be valid - default A128GCM is implicitly used (SHOULD be absent per spec)
+        Assert.True(result.IsValid);
+        Assert.Empty(result.Errors);
+        // Verify enc values are indeed absent/null
+        Assert.Null(request.ClientMetadata?.EncryptedResponseEncValuesSupported);
     }
 }

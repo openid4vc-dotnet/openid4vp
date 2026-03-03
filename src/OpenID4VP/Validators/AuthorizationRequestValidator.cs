@@ -34,6 +34,7 @@ public sealed class AuthorizationRequestValidator : IValidator<AuthorizationRequ
         ValidateDcqlAndScope(request.DcqlQuery, request.Scope, errors);
         ValidateRedirectUri(request.ResponseMode, request.RedirectUri, errors);
         ValidateResponseUri(request.ResponseMode, request.ResponseUri, errors);
+        ValidateEncryptedResponseEncValues(request.ResponseMode, request.ClientMetadata, errors);
         ValidateState(request.State, errors);
         ValidateRequestUriMethod(request.RequestUriMethod, errors);
 
@@ -80,7 +81,7 @@ public sealed class AuthorizationRequestValidator : IValidator<AuthorizationRequ
             return;
         }
 
-        var validModes = new[] { "fragment", "query", "direct_post", "direct_post.jwt" };
+        var validModes = new[] { "fragment", "query", "direct_post", "direct_post.jwt", "dc_api.jwt" };
         if (!validModes.Contains(responseMode))
             errors.Add($"Response mode must be one of: {string.Join(", ", validModes)}, got: {responseMode}");
     }
@@ -106,8 +107,8 @@ public sealed class AuthorizationRequestValidator : IValidator<AuthorizationRequ
 
     private static void ValidateResponseUri(string responseMode, string? responseUri, List<string> errors)
     {
-        // Response URI is required ONLY for direct_post modes
-        if (responseMode == "direct_post" || responseMode == "direct_post.jwt")
+        // Response URI is required for modes that use response_uri
+        if (responseMode == "direct_post" || responseMode == "direct_post.jwt" || responseMode == "dc_api.jwt")
         {
             if (string.IsNullOrEmpty(responseUri))
                 errors.Add($"Response URI is required for response mode '{responseMode}'");
@@ -129,7 +130,33 @@ public sealed class AuthorizationRequestValidator : IValidator<AuthorizationRequ
             errors.Add($"Request URI method must be 'get' or 'post', got: {requestUriMethod}");
     }
 
-    /// <summary>
+    private static void ValidateEncryptedResponseEncValues(string? responseMode, ClientMetadata? clientMetadata, List<string> errors)
+    {
+        // Per OpenID4VP spec Section 5.1:
+        // "encrypted_response_enc_values_supported: OPTIONAL. Non-empty array of strings, where each string is a 
+        // JWE enc algorithm that can be used as the content encryption algorithm for encrypting the Response. 
+        // When a response_mode requiring encryption of the Response (such as dc_api.jwt or direct_post.jwt) is specified, 
+        // this MUST be present for anything other than the default single value of A128GCM. Otherwise, this SHOULD be absent."
+        
+        if (string.IsNullOrEmpty(responseMode))
+            return;
+
+        var encryptedModes = new[] { "direct_post.jwt", "dc_api.jwt" };
+        if (encryptedModes.Contains(responseMode))
+        {
+            // For encrypted response modes with non-default enc values:
+            // - If enc values are null/missing: OK (use default A128GCM, SHOULD be absent)
+            // - If enc values are [A128GCM] only: OK (that's the default, but SHOULD be absent per spec)
+            // - If enc values contain other algorithms: MUST be present and non-empty
+            // - If enc values are empty array: ERROR (must be non-empty if present)
+            
+            if (clientMetadata?.EncryptedResponseEncValuesSupported != null && 
+                clientMetadata.EncryptedResponseEncValuesSupported.Count == 0)
+            {
+                errors.Add($"encrypted_response_enc_values_supported must be a non-empty array for response mode '{responseMode}'. Specify at least one JWE enc algorithm (e.g., A128GCM, A192GCM, A256GCM).");
+            }
+        }
+    }
     /// Validates AuthorizationRequest for Option A transport (Direct URL with all parameters).
     /// Requires: client_id, nonce, response_type, response_mode
     /// Optional: state, dcql_query or scope, redirect_uri, response_uri
