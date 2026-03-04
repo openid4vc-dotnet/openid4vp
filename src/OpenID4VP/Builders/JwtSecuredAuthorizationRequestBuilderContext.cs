@@ -1,11 +1,8 @@
 using Microsoft.IdentityModel.Tokens;
 using OpenID4VC.Core.Results;
-using OpenID4VP.Dcql.Query.Serialization;
 using OpenID4VP.Models;
 using OpenID4VP.Validators;
-using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
-using System.Runtime.ConstrainedExecution;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
@@ -137,22 +134,6 @@ public class JwtSecuredAuthorizationRequestBuilderContext
     {
         _encryptionKey = symmetricKey;
         _encryptionAlgorithm = "A256KW";
-        return this;
-    }
-
-    /// <summary>
-    /// Sets the encryption key (public key for asymmetric algorithms like RSA-OAEP).
-    /// This is OPTIONAL. If provided, the JWT will be encrypted with JWE.
-    /// 
-    /// DEPRECATED: Use type-specific methods instead: WithRsaEncryptionKey() or WithSymmetricEncryptionKey().
-    /// These methods automatically determine the algorithm from the key type and size, eliminating the need for WithEncryptionAlgorithm().
-    /// </summary>
-    /// <param name="encryptionKey">The asymmetric security key (RSA/EC public key) for JWE encryption</param>
-    /// <returns>This builder context for fluent chaining</returns>
-    [Obsolete("Use type-specific methods: WithRsaEncryptionKey() or WithSymmetricEncryptionKey() instead. They automatically determine the algorithm.", false)]
-    public JwtSecuredAuthorizationRequestBuilderContext WithEncryptionKey(SecurityKey encryptionKey)
-    {
-        _encryptionKey = encryptionKey;
         return this;
     }
 

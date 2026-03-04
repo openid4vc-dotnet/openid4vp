@@ -1,6 +1,3 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Text.Json;
-using Microsoft.IdentityModel.Tokens;
 using OpenID4VP.Dcql.Query.Builders;
 using OpenID4VP.Models;
 using OpenID4VC.Core.Results;
@@ -239,7 +236,7 @@ public sealed class AuthorizationRequestBuilder
     ///     .WithName("MyVerifier")
     ///     .WithLogoUri("https://example.com/logo.png")
     ///     .WithJwksUri("https://example.com/jwks.json")
-    ///     .WithPublicKeysFromRsaPrivateKey(rsaKey))
+    ///     .WithPublicKeyFromRsaPrivateKey(rsaKey))
     /// </code>
     /// </summary>
     /// <param name="configure">Callback to configure the ClientMetadata context</param>

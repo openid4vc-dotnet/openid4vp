@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-using System.Linq;
 using OpenID4VP.Models;
 using OpenID4VC.Core.Results;
 

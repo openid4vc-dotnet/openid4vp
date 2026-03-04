@@ -53,7 +53,7 @@ public class YiviDemoTests : IDisposable
     public void Build_AuthRequestByRef_Yivi_Succeeds()
     {
         using var ecdsa256 = ECDsa.Create(ECCurve.NamedCurves.nistP256);
-        var ecdsaKey = new ECDsaSecurityKey(ecdsa256);
+        var ecdsaKey = new ECDsaSecurityKey(ecdsa256) { KeyId = "yivi-key-1" };
 
         // Arrange
         var request = AuthorizationRequestBuilder.Create()
@@ -72,7 +72,7 @@ public class YiviDemoTests : IDisposable
             })
             .WithClientMetadata(metadata => metadata
                 .WithName("verifier")
-                .WithPublicKeysFromEcdsaPrivateKey(ecdsaKey))
+                .WithPublicKeyFromEcdsaPrivateKey(ecdsaKey))
             .Build();
 
         // Act
@@ -106,7 +106,7 @@ public class YiviDemoTests : IDisposable
         var certificate = X509CertificateLoader.LoadPkcs12(certBytes, null, X509KeyStorageFlags.EphemeralKeySet);
 
         // Haal de publieke sleutel op
-        var ecdsaPublicKey = new ECDsaSecurityKey(certificate.GetECDsaPublicKey());
+        var ecdsaPublicKey = new ECDsaSecurityKey(certificate.GetECDsaPublicKey()) { KeyId = "chirppay-key-1" };
 
         var ecdsaPrivateKey = new ECDsaSecurityKey(certificate.GetECDsaPrivateKey());
 
@@ -128,7 +128,7 @@ public class YiviDemoTests : IDisposable
             })
             .WithClientMetadata(metadata => metadata
                 .WithName("verifier")
-                .WithPublicKeysFromEcdsaPrivateKey(ecdsaPublicKey))
+                .WithPublicKeyFromEcdsaPrivateKey(ecdsaPublicKey))
             .Build();
 
         // Act

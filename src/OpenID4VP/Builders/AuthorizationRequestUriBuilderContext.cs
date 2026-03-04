@@ -1,8 +1,5 @@
-using System.Collections.Generic;
-using System.Linq;
 using System.Text.Encodings.Web;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using OpenID4VP.Models;
 using OpenID4VC.Core.Results;
 using OpenID4VP.Validators;

@@ -323,8 +323,10 @@ public class AuthorizationRequestValidatorTests
         // this SHOULD be absent."
         // This test verifies that encrypted response modes are valid without explicit enc values (using default A128GCM)
         using var rsa = RSA.Create(2048);
-        var rsaKey = new RsaSecurityKey(rsa);
-        var jwks = JwksBuilder.CreatePublicKeySet(rsaKey, keyUsage: "enc");
+        var rsaKey = new RsaSecurityKey(rsa) { KeyId = "test-key-1" };
+        var jwkResult = JwksBuilder.CreatePublicKey(rsaKey, keyUsage: "enc");
+        var jwks = new JsonWebKeySet();
+        jwks.Keys.Add(jwkResult.Value);
 
         var buildResult = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)

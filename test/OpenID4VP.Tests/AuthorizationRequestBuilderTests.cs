@@ -716,7 +716,7 @@ public class AuthorizationRequestBuilderTests
     {
         // Arrange
         using var rsa = RSA.Create(2048);
-        var rsaKey = new RsaSecurityKey(rsa);
+        var rsaKey = new RsaSecurityKey(rsa) { KeyId = "test-rsa-key" };
 
         // Act
         var result = AuthorizationRequestBuilder.Create()
@@ -727,7 +727,7 @@ public class AuthorizationRequestBuilderTests
             .WithRedirectUri("https://verifier.example.com/callback")
             .WithClientMetadata(metadata => metadata
                 .WithName("Test Verifier")
-                .WithPublicKeysFromRsaPrivateKey(rsaKey))
+                .WithPublicKeyFromRsaPrivateKey(rsaKey))
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
 
@@ -741,7 +741,7 @@ public class AuthorizationRequestBuilderTests
     {
         // Arrange
         using var ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
-        var ecdsaKey = new ECDsaSecurityKey(ecdsa);
+        var ecdsaKey = new ECDsaSecurityKey(ecdsa) { KeyId = "test-ecdsa-key" };
 
         // Act
         var result = AuthorizationRequestBuilder.Create()
@@ -752,37 +752,7 @@ public class AuthorizationRequestBuilderTests
             .WithRedirectUri("https://verifier.example.com/callback")
             .WithClientMetadata(metadata => metadata
                 .WithName("Test Verifier")
-                .WithPublicKeysFromEcdsaPrivateKey(ecdsaKey))
-            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
-            .Build();
-
-        // Assert
-        var request = result.AssertSuccess();
-        Assert.NotNull(request.ClientMetadata);
-    }
-
-    [Fact]
-    public void WithClientMetadata_WithMultipleKeys_Succeeds()
-    {
-        // Arrange
-        using var rsa1 = RSA.Create(2048);
-        using var rsa2 = RSA.Create(3072);
-        var keys = new SecurityKey[]
-        {
-            new RsaSecurityKey(rsa1),
-            new RsaSecurityKey(rsa2)
-        };
-
-        // Act
-        var result = AuthorizationRequestBuilder.Create()
-            .WithResponseType(ResponseTypes.VpToken)
-            .WithClientId("https://verifier.example.com")
-            .WithNonce("n-0S6_WzA2Mj")
-            .WithResponseMode(ResponseModes.Fragment)
-            .WithRedirectUri("https://verifier.example.com/callback")
-            .WithClientMetadata(metadata => metadata
-                .WithName("Test Verifier")
-                .WithPublicKeysFromPrivateKeys(keys))
+                .WithPublicKeyFromEcdsaPrivateKey(ecdsaKey))
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
 
@@ -812,36 +782,11 @@ public class AuthorizationRequestBuilderTests
     }
 
     [Fact]
-    public void WithClientMetadata_FailingKeyExtraction_ReturnsError()
-    {
-        // Arrange - Unsupported key type
-        var symmetricKey = new SymmetricSecurityKey(new byte[32]);
-        var keys = new SecurityKey[] { symmetricKey };
-
-        // Act
-        var result = AuthorizationRequestBuilder.Create()
-            .WithResponseType(ResponseTypes.VpToken)
-            .WithClientId("https://verifier.example.com")
-            .WithNonce("n-0S6_WzA2Mj")
-            .WithResponseMode(ResponseModes.Fragment)
-            .WithRedirectUri("https://verifier.example.com/callback")
-            .WithClientMetadata(metadata => metadata
-                .WithName("Test Verifier")
-                .WithPublicKeysFromPrivateKeys(keys))
-            .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
-            .Build();
-
-        // Assert
-        var errors = result.AssertError();
-        Assert.Contains(errors, e => e.Message.Contains("Unsupported key type"));
-    }
-
-    [Fact]
     public void WithClientMetadata_WithRsaPublicKey_IncludesKidAndAlgInJwks()
     {
         // Arrange
         using var rsa = RSA.Create(2048);
-        var rsaKey = new RsaSecurityKey(rsa);
+        var rsaKey = new RsaSecurityKey(rsa) { KeyId = "test-rsa-key" };
 
         // Act
         var result = AuthorizationRequestBuilder.Create()
@@ -852,7 +797,7 @@ public class AuthorizationRequestBuilderTests
             .WithRedirectUri("https://verifier.example.com/callback")
             .WithClientMetadata(metadata => metadata
                 .WithName("Test Verifier")
-                .WithPublicKeysFromRsaPrivateKey(rsaKey))
+                .WithPublicKeyFromRsaPrivateKey(rsaKey))
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .Build();
 
@@ -889,7 +834,7 @@ public class AuthorizationRequestBuilderTests
             Assert.NotEqual(System.Text.Json.JsonValueKind.Null, algElement.ValueKind);
             var algValue = algElement.GetString();
             Assert.False(string.IsNullOrWhiteSpace(algValue), "alg value must not be empty");
-            Assert.Equal("RSA-OAEP", algValue);  // Encryption algorithm for RSA
+            Assert.Equal("RSA-OAEP-256", algValue);  // Key encryption algorithm for RSA (default)
             
             // Verify the key has 'use' set to 'enc' (encryption)
             Assert.True(keyElement.TryGetProperty("use", out var useElement),
@@ -941,15 +886,14 @@ public class AuthorizationRequestBuilderTests
     }
 
     [Fact]
-    public void WithPublicKeysFromRsaPrivateKey_WithDefaultA128GCM_ShouldNotAddToEncValues()
+    public void WithPublicKeyFromRsaPrivateKey_WithDefaultA256GCM_ShouldAddToEncValues()
     {
-        // Per spec: A128GCM is the default and SHOULD be absent from EncryptedResponseEncValuesSupported
-        // This test verifies that when using keys that derive to A128GCM (default),
-        // it is NOT added to the EncryptedResponseEncValuesSupported list
+        // Per spec: Only default A128GCM should be absent from EncryptedResponseEncValuesSupported
+        // This test verifies that when using explicit enc (A256GCM), it IS added to the list
         
-        // Arrange - 2048-bit RSA derives to A128GCM (the default)
+        // Arrange
         using var rsa = RSA.Create(2048);
-        var rsaKey = new RsaSecurityKey(rsa);
+        var rsaKey = new RsaSecurityKey(rsa) { KeyId = "test-rsa-key" };
 
         // Act
         var result = AuthorizationRequestBuilder.Create()
@@ -961,25 +905,26 @@ public class AuthorizationRequestBuilderTests
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .WithClientMetadata(metadata => metadata
                 .WithName("Test Verifier")
-                .WithPublicKeysFromRsaPrivateKey(rsaKey))  // Uses 2048-bit RSA -> A128GCM
+                .WithPublicKeyFromRsaPrivateKey(rsaKey))  // Uses default A256GCM
             .Build();
 
         // Assert
         var request = result.AssertSuccess();
-        // A128GCM (default) SHOULD be absent from EncryptedResponseEncValuesSupported
-        Assert.Null(request.ClientMetadata?.EncryptedResponseEncValuesSupported);
+        // A256GCM (explicit, non-default) SHOULD be present in EncryptedResponseEncValuesSupported
+        Assert.NotNull(request.ClientMetadata?.EncryptedResponseEncValuesSupported);
+        Assert.Single(request.ClientMetadata.EncryptedResponseEncValuesSupported);
+        Assert.Equal("A256GCM", request.ClientMetadata.EncryptedResponseEncValuesSupported[0]);
     }
 
     [Fact]
-    public void WithPublicKeysFromEcdsaPrivateKey_WithDefaultA128GCM_ShouldNotAddToEncValues()
+    public void WithPublicKeyFromEcdsaPrivateKey_WithDefaultA256GCM_ShouldAddToEncValues()
     {
-        // Per spec: A128GCM is the default and SHOULD be absent from EncryptedResponseEncValuesSupported
-        // This test verifies that when using keys that derive to A128GCM (default),
-        // it is NOT added to the EncryptedResponseEncValuesSupported list
+        // Per spec: Only default A128GCM should be absent from EncryptedResponseEncValuesSupported
+        // This test verifies that when using explicit enc (A256GCM), it IS added to the list
         
-        // Arrange - P-256 ECDSA derives to A128GCM (the default)
+        // Arrange - P-256 ECDSA with explicit A256GCM enc
         using var ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
-        var ecdsaKey = new ECDsaSecurityKey(ecdsa);
+        var ecdsaKey = new ECDsaSecurityKey(ecdsa) { KeyId = "test-ecdsa-key" };
 
         // Act
         var result = AuthorizationRequestBuilder.Create()
@@ -991,24 +936,26 @@ public class AuthorizationRequestBuilderTests
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .WithClientMetadata(metadata => metadata
                 .WithName("Test Verifier")
-                .WithPublicKeysFromEcdsaPrivateKey(ecdsaKey))  // Uses P-256 ECDSA -> A128GCM
+                .WithPublicKeyFromEcdsaPrivateKey(ecdsaKey))  // Uses default A256GCM
             .Build();
 
         // Assert
         var request = result.AssertSuccess();
-        // A128GCM (default) SHOULD be absent from EncryptedResponseEncValuesSupported
-        Assert.Null(request.ClientMetadata?.EncryptedResponseEncValuesSupported);
+        // A256GCM (explicit, non-default) SHOULD be present in EncryptedResponseEncValuesSupported
+        Assert.NotNull(request.ClientMetadata?.EncryptedResponseEncValuesSupported);
+        Assert.Single(request.ClientMetadata.EncryptedResponseEncValuesSupported);
+        Assert.Equal("A256GCM", request.ClientMetadata.EncryptedResponseEncValuesSupported[0]);
     }
 
     [Fact]
-    public void WithPublicKeysFromRsaPrivateKey_WithNonDefaultA192GCM_ShouldAddToEncValues()
+    public void WithPublicKeyFromRsaPrivateKey_WithCustomA192GCM_ShouldAddToEncValues()
     {
-        // Verify contrast: When using keys that derive to non-default values (A192GCM or A256GCM),
+        // Verify contrast: When using explicit non-default values (A192GCM),
         // they SHOULD be added to EncryptedResponseEncValuesSupported
         
-        // Arrange - 3072-bit RSA derives to A192GCM (non-default)
+        // Arrange
         using var rsa = RSA.Create(3072);
-        var rsaKey = new RsaSecurityKey(rsa);
+        var rsaKey = new RsaSecurityKey(rsa) { KeyId = "test-rsa-key" };
 
         // Act
         var result = AuthorizationRequestBuilder.Create()
@@ -1020,7 +967,7 @@ public class AuthorizationRequestBuilderTests
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .WithClientMetadata(metadata => metadata
                 .WithName("Test Verifier")
-                .WithPublicKeysFromRsaPrivateKey(rsaKey))  // Uses 3072-bit RSA -> A192GCM
+                .WithPublicKeyFromRsaPrivateKey(rsaKey, enc: "A192GCM"))  // Explicit A192GCM (non-default)
             .Build();
 
         // Assert
