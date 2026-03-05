@@ -1,5 +1,6 @@
-using FluentValidation;
+using OpenID4VC.Core.Validation;
 using OpenID4VP.Dcql.Query.Models;
+using OpenID4VC.Core.Results;
 
 namespace OpenID4VP.Dcql.Query.Validators;
 
@@ -7,63 +8,38 @@ namespace OpenID4VP.Dcql.Query.Validators;
 /// Validates that credential_set references only defined credential query IDs.
 /// Single Responsibility: Only validates credential set cross-references.
 /// </summary>
-public class CredentialSetReferenceValidator : AbstractValidator<DcqlQuery>
+public class CredentialSetReferenceValidator : IValidator<DcqlQuery>
 {
-    public CredentialSetReferenceValidator()
+    public Result Validate(DcqlQuery obj)
     {
-        RuleFor(x => x)
-            .Must(ValidateCredentialSetReferences)
-            .WithMessage(x => GetCredentialSetErrorMessage(x))
-            .When(x => x.CredentialSets != null && x.Credentials != null);
-    }
+        var errors = new List<ValidationError>();
 
-    private static bool ValidateCredentialSetReferences(DcqlQuery query)
-    {
-        if (query.CredentialSets == null || query.Credentials == null)
-            return true;
-
-        var credentialIds = new HashSet<string>(query.Credentials.Select(c => c.Id));
-        var undefinedIds = new List<string>();
-
-        foreach (var credentialSet in query.CredentialSets)
+        if (obj.CredentialSets != null && obj.Credentials != null)
         {
-            foreach (var option in credentialSet.Options)
+            var credentialIds = new HashSet<string>(obj.Credentials.Select(c => c.Id));
+            var undefinedIds = new List<string>();
+
+            foreach (var credentialSet in obj.CredentialSets)
             {
-                foreach (var credentialId in option)
+                foreach (var option in credentialSet.Options)
                 {
-                    if (!credentialIds.Contains(credentialId))
+                    foreach (var credentialId in option)
                     {
-                        undefinedIds.Add(credentialId);
+                        if (!credentialIds.Contains(credentialId))
+                        {
+                            undefinedIds.Add(credentialId);
+                        }
                     }
                 }
             }
-        }
 
-        return undefinedIds.Count == 0;
-    }
-
-    private static string GetCredentialSetErrorMessage(DcqlQuery query)
-    {
-        if (query.CredentialSets == null || query.Credentials == null)
-            return string.Empty;
-
-        var credentialIds = new HashSet<string>(query.Credentials.Select(c => c.Id));
-        var undefinedIds = new List<string>();
-
-        foreach (var credentialSet in query.CredentialSets)
-        {
-            foreach (var option in credentialSet.Options)
+            if (undefinedIds.Count > 0)
             {
-                foreach (var credentialId in option)
-                {
-                    if (!credentialIds.Contains(credentialId) && !undefinedIds.Contains(credentialId))
-                    {
-                        undefinedIds.Add(credentialId);
-                    }
-                }
+                var message = $"Credential set contains undefined credential id(s): '{string.Join(", ", undefinedIds)}'";
+                errors.Add(new ValidationError(message, "credential_sets"));
             }
         }
 
-        return $"Credential set contains undefined credential id(s): '{string.Join(", ", undefinedIds)}'";
+        return errors.Count > 0 ? errors.Cast<Error>().ToArray() : Result.Success();
     }
 }

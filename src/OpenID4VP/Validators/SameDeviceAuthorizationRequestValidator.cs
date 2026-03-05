@@ -1,5 +1,6 @@
 using OpenID4VP.Common;
 using OpenID4VP.Models;
+using OpenID4VC.Core.Results;
 
 namespace OpenID4VP.Validators
 {
@@ -17,37 +18,37 @@ namespace OpenID4VP.Validators
     /// </summary>
     public sealed class SameDeviceAuthorizationRequestValidator : IValidator<AuthorizationRequest>
     {
-        public ValidationResult Validate(AuthorizationRequest request)
+        public Result Validate(AuthorizationRequest request)
         {
-            var errors = new List<string>();
+            var errors = new List<ValidationError>();
 
             // Check response_mode
             if (string.IsNullOrEmpty(request.ResponseMode))
             {
-                errors.Add("response_mode is REQUIRED");
+                errors.Add(new ValidationError("response_mode is REQUIRED", "response_mode"));
             }
             else if (request.ResponseMode != "fragment" && request.ResponseMode != "query")
             {
-                errors.Add($"response_mode '{request.ResponseMode}' is not valid for same-device mode. " +
-                          "Same-device requires 'fragment' or 'query'");
+                errors.Add(new ValidationError($"response_mode '{request.ResponseMode}' is not valid for same-device mode. " +
+                          "Same-device requires 'fragment' or 'query'", "response_mode"));
             }
 
             // Check redirect_uri (REQUIRED for same-device)
             if (string.IsNullOrEmpty(request.RedirectUri))
             {
-                errors.Add("redirect_uri is REQUIRED for same-device mode (used for response delivery)");
+                errors.Add(new ValidationError("redirect_uri is REQUIRED for same-device mode (used for response delivery)", "redirect_uri"));
             }
 
             // Check response_type (REQUIRED)
             if (string.IsNullOrEmpty(request.ResponseType) || request.ResponseType != "vp_token")
             {
-                errors.Add("response_type is REQUIRED and must be 'vp_token' for same-device mode");
+                errors.Add(new ValidationError("response_type is REQUIRED and must be 'vp_token' for same-device mode", "response_type"));
             }
 
             // Check nonce (REQUIRED)
             if (string.IsNullOrEmpty(request.Nonce))
             {
-                errors.Add("nonce is REQUIRED for same-device mode");
+                errors.Add(new ValidationError("nonce is REQUIRED for same-device mode", "nonce"));
             }
 
             // Check DCQL query OR scope (at least one, not both)
@@ -56,30 +57,30 @@ namespace OpenID4VP.Validators
 
             if (!hasDcql && !hasScope)
             {
-                errors.Add("Either dcql_query or scope MUST be set for same-device mode");
+                errors.Add(new ValidationError("Either dcql_query or scope MUST be set for same-device mode", "dcql_query"));
             }
             else if (hasDcql && hasScope)
             {
-                errors.Add("Only one of dcql_query or scope can be set, not both");
+                errors.Add(new ValidationError("Only one of dcql_query or scope can be set, not both", "dcql_query"));
             }
 
             // Check forbidden fields
             if (!string.IsNullOrEmpty(request.RequestUri))
             {
-                errors.Add("request_uri MUST NOT be set in same-device mode. " +
+                errors.Add(new ValidationError("request_uri MUST NOT be set in same-device mode. " +
                           "Same-device sends all parameters inline via redirect_uri. " +
-                          "request_uri is only used in cross-device mode");
+                          "request_uri is only used in cross-device mode", "request_uri"));
             }
 
             if (!string.IsNullOrEmpty(request.ResponseUri))
             {
-                errors.Add("response_uri MUST NOT be set in same-device mode. " +
-                          "Same-device uses redirect_uri for response delivery");
+                errors.Add(new ValidationError("response_uri MUST NOT be set in same-device mode. " +
+                          "Same-device uses redirect_uri for response delivery", "response_uri"));
             }
 
             return errors.Count == 0 
-                ? ValidationResult.Success()
-                : ValidationResult.Failure(errors);
+                ? Result.Success()
+                : errors.Cast<Error>().ToArray();
         }
     }
 }

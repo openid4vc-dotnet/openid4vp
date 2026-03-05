@@ -25,7 +25,7 @@ public class AuthorizationResponseValidatorTests
         
         var result = _validator.Validate(response);
         
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
         Assert.Empty(result.Errors);
     }
 
@@ -37,7 +37,7 @@ public class AuthorizationResponseValidatorTests
         
         var result = _validator.Validate(response);
         
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -48,7 +48,7 @@ public class AuthorizationResponseValidatorTests
         
         var result = _validator.Validate(response);
         
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public class AuthorizationResponseValidatorTests
         
         // The parser creates a valid VpToken, so we verify validation passes
         var result = _validator.Validate(response);
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -81,7 +81,7 @@ public class AuthorizationResponseValidatorTests
         var result = _validator.Validate(response);
         
         // Valid response creates valid presentations
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -92,7 +92,7 @@ public class AuthorizationResponseValidatorTests
         
         var result = _validator.ValidateStateMatch(response, "request-state-123");
         
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -103,8 +103,8 @@ public class AuthorizationResponseValidatorTests
         
         var result = _validator.ValidateStateMatch(response, "request-state-123");
         
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.Contains("State mismatch"));
+        Assert.False(result.IsSuccess);
+        Assert.Contains(result.Errors, e => e.Message.Contains("State mismatch"));
     }
 
     [Fact]
@@ -115,8 +115,8 @@ public class AuthorizationResponseValidatorTests
         
         var result = _validator.ValidateStateMatch(response, "request-state-123");
         
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.Contains("missing"));
+        Assert.False(result.IsSuccess);
+        Assert.Contains(result.Errors, e => e.Message.Contains("missing"));
     }
 
     [Fact]
@@ -143,7 +143,7 @@ public class AuthorizationResponseValidatorTests
         
         var result = _validator.ValidateStateMatch(response, "state-123");
         
-        Assert.False(result.IsValid);
+        Assert.False(result.IsSuccess);
     }
 
     [Fact]
@@ -154,8 +154,8 @@ public class AuthorizationResponseValidatorTests
         
         var result = _validator.ValidateStateMatch(response, "state-123");
         
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.Contains("mismatch"));
+        Assert.False(result.IsSuccess);
+        Assert.Contains(result.Errors, e => e.Message.Contains("mismatch"));
     }
 
     [Fact]
@@ -166,7 +166,7 @@ public class AuthorizationResponseValidatorTests
         
         var result = _validator.Validate(response);
         
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -177,7 +177,7 @@ public class AuthorizationResponseValidatorTests
         
         var result = _validator.Validate(response);
         
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
         Assert.Empty(result.Errors);
     }
 }

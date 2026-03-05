@@ -51,10 +51,8 @@ public static class SameDeviceAuthorizationRequest
         var validator = new SameDeviceAuthorizationRequestValidator();
         var validationResult = validator.Validate(buildResult.Value!);
 
-        if (!validationResult.IsValid)
-            return validationResult.Errors
-                .Select(ValidatorErrors.FromValidator)
-                .ToArray();
+        if (!validationResult.IsSuccess)
+            return validationResult.Errors.ToArray();
 
         return buildResult.Value!;
     }

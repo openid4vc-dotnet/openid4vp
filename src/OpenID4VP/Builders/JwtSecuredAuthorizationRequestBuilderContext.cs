@@ -259,8 +259,8 @@ public class JwtSecuredAuthorizationRequestBuilderContext
         var validator = new AuthorizationRequestValidator();
         var validationResult = validator.Validate(_request);
 
-        if (!validationResult.IsValid)
-            return validationResult.Errors.Select(e => new ValidationError(e, "validation_error")).ToArray();
+        if (!validationResult.IsSuccess)
+            return validationResult.Errors.ToArray();
 
         try
         {
@@ -325,7 +325,7 @@ public class JwtSecuredAuthorizationRequestBuilderContext
                 // Validate x509_san_dns requirements if Client Identifier uses that prefix
                 var x509ValidationResult = ValidateX509SanDnsRequirements(_request, _certificateChain, _signingKey);
                 if (!x509ValidationResult.IsSuccess)
-                    return Result<JwtSecuredAuthorizationRequest>.Failure(x509ValidationResult.Errors.ToArray());
+                    return x509ValidationResult.Errors.ToArray();
 
                 // Add x5c header: array of base64-encoded (not base64url) DER certificates per RFC 7515 Section 4.1.6
                 var x5cArray = _certificateChain

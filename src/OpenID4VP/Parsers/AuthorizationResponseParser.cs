@@ -95,32 +95,4 @@ public sealed class AuthorizationResponseParser
 
         return response;
     }
-
-    /// <summary>
-    /// Parses an AuthorizationResponse from form parameters (typically from direct_post response mode).
-    /// </summary>
-    /// <param name="parameters">Dictionary of form parameters</param>
-    /// <returns>A Result containing the parsed AuthorizationResponse if successful, or errors if parsing failed</returns>
-    public Result<AuthorizationResponse> ParseFormParameters(Dictionary<string, string> parameters)
-    {
-        if (parameters == null)
-            return ParserErrors.NullFormParameters();
-
-        if (!parameters.TryGetValue("vp_token", out var vpTokenStr))
-            return ParserErrors.MissingVpTokenParameter();
-
-        var vpToken = new VpToken { Presentations = vpTokenStr };
-
-        parameters.TryGetValue("state", out var state);
-        parameters.TryGetValue("id_token", out var idToken);
-
-        var response = new AuthorizationResponse
-        {
-            VpToken = vpToken,
-            State = state,
-            IdToken = idToken
-        };
-
-        return response;
-    }
 }

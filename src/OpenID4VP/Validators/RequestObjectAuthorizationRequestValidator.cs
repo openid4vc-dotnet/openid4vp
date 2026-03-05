@@ -1,5 +1,6 @@
 using OpenID4VP.Common;
 using OpenID4VP.Models;
+using OpenID4VC.Core.Results;
 
 namespace OpenID4VP.Validators
 {
@@ -22,20 +23,20 @@ namespace OpenID4VP.Validators
     /// </summary>
     public sealed class RequestObjectAuthorizationRequestValidator : IValidator<AuthorizationRequest>
     {
-        public ValidationResult Validate(AuthorizationRequest request)
+        public Result Validate(AuthorizationRequest request)
         {
-            var errors = new List<string>();
+            var errors = new List<ValidationError>();
 
             // Check required: response_type
             if (string.IsNullOrEmpty(request.ResponseType) || request.ResponseType != "vp_token")
             {
-                errors.Add("response_type is REQUIRED and must be 'vp_token' for Request Object");
+                errors.Add(new ValidationError("response_type is REQUIRED and must be 'vp_token' for Request Object", "response_type"));
             }
 
             // Check required: nonce
             if (string.IsNullOrEmpty(request.Nonce))
             {
-                errors.Add("nonce is REQUIRED for Request Object");
+                errors.Add(new ValidationError("nonce is REQUIRED for Request Object", "nonce"));
             }
 
             // Check required: dcql_query OR scope (at least one, not both)
@@ -44,43 +45,43 @@ namespace OpenID4VP.Validators
 
             if (!hasDcql && !hasScope)
             {
-                errors.Add("Either dcql_query or scope MUST be set for Request Object");
+                errors.Add(new ValidationError("Either dcql_query or scope MUST be set for Request Object", "dcql_query"));
             }
             else if (hasDcql && hasScope)
             {
-                errors.Add("Only one of dcql_query or scope can be set in Request Object, not both");
+                errors.Add(new ValidationError("Only one of dcql_query or scope can be set in Request Object, not both", "dcql_query"));
             }
 
             // Check required: response_uri (where wallet sends response back)
             if (string.IsNullOrEmpty(request.ResponseUri))
             {
-                errors.Add("response_uri is REQUIRED for Request Object. " +
-                          "It specifies where the wallet returns the authorization response via HTTP POST");
+                errors.Add(new ValidationError("response_uri is REQUIRED for Request Object. " +
+                          "It specifies where the wallet returns the authorization response via HTTP POST", "response_uri"));
             }
 
             // Check required: client_id
             if (string.IsNullOrEmpty(request.ClientId))
             {
-                errors.Add("client_id is REQUIRED");
+                errors.Add(new ValidationError("client_id is REQUIRED", "client_id"));
             }
 
             // Check forbidden: request_uri (request_uri is in minimal request, not in RequestObject)
             if (!string.IsNullOrEmpty(request.RequestUri))
             {
-                errors.Add("request_uri MUST NOT be set in Request Object. " +
-                          "request_uri is specified in the minimal cross-device request, not in the Request Object itself");
+                errors.Add(new ValidationError("request_uri MUST NOT be set in Request Object. " +
+                          "request_uri is specified in the minimal cross-device request, not in the Request Object itself", "request_uri"));
             }
 
             // Check forbidden: redirect_uri (cross-device uses response_uri, not redirect_uri)
             if (!string.IsNullOrEmpty(request.RedirectUri))
             {
-                errors.Add("redirect_uri MUST NOT be set in Request Object. " +
-                          "Cross-device flow uses response_uri for response delivery");
+                errors.Add(new ValidationError("redirect_uri MUST NOT be set in Request Object. " +
+                          "Cross-device flow uses response_uri for response delivery", "redirect_uri"));
             }
 
             return errors.Count == 0
-                ? ValidationResult.Success()
-                : ValidationResult.Failure(errors);
+                ? Result.Success()
+                : errors.Cast<Error>().ToArray();
         }
     }
 }

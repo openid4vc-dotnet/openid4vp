@@ -250,7 +250,7 @@ public sealed class ClientMetadataBuilderContext
     public Result<ClientMetadata> Build()
     {
         if (_errors.Count > 0)
-            return Result<ClientMetadata>.Failure(_errors);
+            return _errors.Cast<Error>().ToArray();
 
         JsonElement? finalJwks = null;
 
@@ -260,22 +260,22 @@ public sealed class ClientMetadataBuilderContext
             // Validate the JWKS
             if (ValidateNoPrivateKeysInJwks(_jwks))
             {
-                return Result<ClientMetadata>.Failure(new ValidationError("JWKS contains private keys - only public keys allowed", "private_keys_in_jwks"));
+                return new ValidationError("JWKS contains private keys - only public keys allowed", "private_keys_in_jwks");
             }
 
             if (!ValidateAllKeysHaveKid(_jwks))
             {
-                return Result<ClientMetadata>.Failure(new ValidationError("All keys in JWKS must have a 'kid' (Key ID) parameter. The kid is used by the wallet to identify which key to use for encrypting the response.", "missing_kid_in_jwks"));
+                return new ValidationError("All keys in JWKS must have a 'kid' (Key ID) parameter. The kid is used by the wallet to identify which key to use for encrypting the response.", "missing_kid_in_jwks");
             }
 
             if (!ValidateAllKeysHaveAlg(_jwks))
             {
-                return Result<ClientMetadata>.Failure(new ValidationError("All keys in JWKS must have an 'alg' (Algorithm) parameter. The alg specifies which algorithm this key can be used with (e.g., RS256, ES256, RSA-OAEP).", "missing_alg_in_jwks"));
+                return new ValidationError("All keys in JWKS must have an 'alg' (Algorithm) parameter. The alg specifies which algorithm this key can be used with (e.g., RS256, ES256, RSA-OAEP).", "missing_alg_in_jwks");
             }
 
             if (!ValidateAllKeysHaveUseEncryption(_jwks))
             {
-                return Result<ClientMetadata>.Failure(new ValidationError("All keys in JWKS must have 'use' (Key Usage) set to 'enc' (encryption). These keys are used to encrypt the authorization response.", "invalid_key_use_in_jwks"));
+                return new ValidationError("All keys in JWKS must have 'use' (Key Usage) set to 'enc' (encryption). These keys are used to encrypt the authorization response.", "invalid_key_use_in_jwks");
             }
 
             // Convert to JsonElement for storage
@@ -285,7 +285,7 @@ public sealed class ClientMetadataBuilderContext
             }
             catch (Exception ex)
             {
-                return Result<ClientMetadata>.Failure(new ValidationError($"Failed to convert JWKS: {ex.Message}", "jwks_conversion_error"));
+                return new ValidationError($"Failed to convert JWKS: {ex.Message}", "jwks_conversion_error");
             }
         }
 

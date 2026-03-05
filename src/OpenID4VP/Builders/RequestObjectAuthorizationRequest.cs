@@ -53,10 +53,8 @@ public static class RequestObjectAuthorizationRequest
         var validator = new RequestObjectAuthorizationRequestValidator();
         var result = validator.Validate(buildResult.Value!);
 
-        if (!result.IsValid)
-            return result.Errors
-                .Select(ValidatorErrors.FromValidator)
-                .ToArray();
+        if (!result.IsSuccess)
+            return result.Errors.ToArray();
 
         return buildResult.Value!;
     }

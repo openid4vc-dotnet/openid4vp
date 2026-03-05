@@ -20,12 +20,12 @@ public sealed class AuthorizationRequestValidator : IValidator<AuthorizationRequ
     /// <summary>
     /// Validates the AuthorizationRequest for spec compliance.
     /// </summary>
-    public ValidationResult Validate(AuthorizationRequest request)
+    public Result Validate(AuthorizationRequest request)
     {
         if (request == null)
             throw new ArgumentNullException(nameof(request));
 
-        var errors = new List<string>();
+        var errors = new List<ValidationError>();
 
         ValidateResponseType(request.ResponseType, errors);
         ValidateClientId(request.ClientId, errors);
@@ -39,98 +39,98 @@ public sealed class AuthorizationRequestValidator : IValidator<AuthorizationRequ
         ValidateRequestUriMethod(request.RequestUriMethod, errors);
 
         return errors.Count > 0 
-            ? ValidationResult.Failure(errors) 
-            : ValidationResult.Success();
+            ? errors.Cast<Error>().ToArray()
+            : Result.Success();
     }
 
-    private static void ValidateResponseType(string responseType, List<string> errors)
+    private static void ValidateResponseType(string responseType, List<ValidationError> errors)
     {
         if (string.IsNullOrEmpty(responseType))
         {
-            errors.Add("Response type is required");
+            errors.Add(new ValidationError("Response type is required", "response_type"));
             return;
         }
 
         if (responseType != VpToken && responseType != VpTokenIdToken)
-            errors.Add($"Response type must be '{VpToken}' or '{VpTokenIdToken}', got: {responseType}");
+            errors.Add(new ValidationError($"Response type must be '{VpToken}' or '{VpTokenIdToken}', got: {responseType}", "response_type"));
     }
 
-    private static void ValidateClientId(string clientId, List<string> errors)
+    private static void ValidateClientId(string clientId, List<ValidationError> errors)
     {
         if (string.IsNullOrEmpty(clientId))
-            errors.Add("Client ID is required");
+            errors.Add(new ValidationError("Client ID is required", "client_id"));
     }
 
-    private static void ValidateNonce(string nonce, List<string> errors)
+    private static void ValidateNonce(string nonce, List<ValidationError> errors)
     {
         if (string.IsNullOrEmpty(nonce))
         {
-            errors.Add("Nonce is required");
+            errors.Add(new ValidationError("Nonce is required", "nonce"));
             return;
         }
 
         if (!UrlSafeCharacters.IsMatch(nonce))
-            errors.Add("Nonce must contain only ASCII URL-safe characters (A-Z, a-z, 0-9, -, ., _, ~)");
+            errors.Add(new ValidationError("Nonce must contain only ASCII URL-safe characters (A-Z, a-z, 0-9, -, ., _, ~)", "nonce"));
     }
 
-    private static void ValidateResponseMode(string responseMode, List<string> errors)
+    private static void ValidateResponseMode(string responseMode, List<ValidationError> errors)
     {
         if (string.IsNullOrEmpty(responseMode))
         {
-            errors.Add("Response mode is required");
+            errors.Add(new ValidationError("Response mode is required", "response_mode"));
             return;
         }
 
         var validModes = new[] { "fragment", "query", "direct_post", "direct_post.jwt", "dc_api.jwt" };
         if (!validModes.Contains(responseMode))
-            errors.Add($"Response mode must be one of: {string.Join(", ", validModes)}, got: {responseMode}");
+            errors.Add(new ValidationError($"Response mode must be one of: {string.Join(", ", validModes)}, got: {responseMode}", "response_mode"));
     }
 
-    private static void ValidateDcqlAndScope(object? dcqlQuery, string? scope, List<string> errors)
+    private static void ValidateDcqlAndScope(object? dcqlQuery, string? scope, List<ValidationError> errors)
     {
         var hasDcql = dcqlQuery != null;
         var hasScope = !string.IsNullOrEmpty(scope);
 
         if (!hasDcql && !hasScope)
-            errors.Add("Either dcql_query or scope must be present");
+            errors.Add(new ValidationError("Either dcql_query or scope must be present", "dcql_query"));
 
         if (hasDcql && hasScope)
-            errors.Add("Only one of dcql_query or scope can be present, not both");
+            errors.Add(new ValidationError("Only one of dcql_query or scope can be present, not both", "dcql_query"));
     }
 
-    private static void ValidateRedirectUri(string responseMode, string? redirectUri, List<string> errors)
+    private static void ValidateRedirectUri(string responseMode, string? redirectUri, List<ValidationError> errors)
     {
         // redirect_uri is not always required based on response_mode
         // Only validate if present in direct_post tests
         // For other modes, it's optional per OAuth 2.0
     }
 
-    private static void ValidateResponseUri(string responseMode, string? responseUri, List<string> errors)
+    private static void ValidateResponseUri(string responseMode, string? responseUri, List<ValidationError> errors)
     {
         // Response URI is required for modes that use response_uri
         if (responseMode == "direct_post" || responseMode == "direct_post.jwt" || responseMode == "dc_api.jwt")
         {
             if (string.IsNullOrEmpty(responseUri))
-                errors.Add($"Response URI is required for response mode '{responseMode}'");
+                errors.Add(new ValidationError($"Response URI is required for response mode '{responseMode}'", "response_uri"));
         }
     }
 
-    private static void ValidateState(string? state, List<string> errors)
+    private static void ValidateState(string? state, List<ValidationError> errors)
     {
         if (state != null && !UrlSafeCharacters.IsMatch(state))
-            errors.Add("State must contain only ASCII URL-safe characters (A-Z, a-z, 0-9, -, ., _, ~)");
+            errors.Add(new ValidationError("State must contain only ASCII URL-safe characters (A-Z, a-z, 0-9, -, ., _, ~)", "state"));
     }
 
-    private static void ValidateRequestUriMethod(string? requestUriMethod, List<string> errors)
+    private static void ValidateRequestUriMethod(string? requestUriMethod, List<ValidationError> errors)
     {
         if (string.IsNullOrEmpty(requestUriMethod))
             return;
 
         if (requestUriMethod != "get" && requestUriMethod != "post")
-            errors.Add($"Request URI method must be 'get' or 'post', got: {requestUriMethod}");
+            errors.Add(new ValidationError($"Request URI method must be 'get' or 'post', got: {requestUriMethod}", "request_uri_method"));
     }
 
-    private static void ValidateEncryptedResponseEncValues(string? responseMode, ClientMetadata? clientMetadata, List<string> errors)
+    private static void ValidateEncryptedResponseEncValues(string? responseMode, ClientMetadata? clientMetadata, List<ValidationError> errors)
     {
         // Per OpenID4VP spec Section 5.1:
         // "encrypted_response_enc_values_supported: OPTIONAL. Non-empty array of strings, where each string is a 
@@ -153,7 +153,7 @@ public sealed class AuthorizationRequestValidator : IValidator<AuthorizationRequ
             if (clientMetadata?.EncryptedResponseEncValuesSupported != null && 
                 clientMetadata.EncryptedResponseEncValuesSupported.Count == 0)
             {
-                errors.Add($"encrypted_response_enc_values_supported must be a non-empty array for response mode '{responseMode}'. Specify at least one JWE enc algorithm (e.g., A128GCM, A192GCM, A256GCM).");
+                errors.Add(new ValidationError($"encrypted_response_enc_values_supported must be a non-empty array for response mode '{responseMode}'. Specify at least one JWE enc algorithm (e.g., A128GCM, A192GCM, A256GCM).", "encrypted_response_enc_values_supported"));
             }
         }
     }

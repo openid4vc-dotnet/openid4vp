@@ -55,7 +55,7 @@ public class DcqlQueryTests
         var result = validator.Validate(query);
 
         // Assert
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -73,8 +73,8 @@ public class DcqlQueryTests
         var result = validator.Validate(query);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.ErrorMessage.Contains("unique"));
+        Assert.False(result.IsSuccess);
+        Assert.Contains(result.Errors, e => e.Message.Contains("unique"));
     }
 
     [Fact]

@@ -1,6 +1,7 @@
-using FluentValidation;
+using OpenID4VC.Core.Validation;
 using OpenID4VP.Dcql.Query.Models;
 using OpenID4VP.Dcql.Common;
+using OpenID4VC.Core.Results;
 
 namespace OpenID4VP.Dcql.Query.Validators;
 
@@ -9,14 +10,18 @@ namespace OpenID4VP.Dcql.Query.Validators;
 /// Single Responsibility: Only validates claim set cross-references.
 /// Depends on: IClaimsProvider abstraction (DIP)
 /// </summary>
-public class ClaimSetReferenceValidator : AbstractValidator<DcqlCredentialQuery>
+public class ClaimSetReferenceValidator : IValidator<DcqlCredentialQuery>
 {
-    public ClaimSetReferenceValidator()
+    public Result Validate(DcqlCredentialQuery obj)
     {
-        RuleFor(x => x.ClaimSets)
-            .Must(ValidateClaimSetReferences)
-            .WithMessage("claim_sets must reference only defined claim IDs")
-            .When(x => x.ClaimSets != null);
+        var errors = new List<ValidationError>();
+
+        if (obj.ClaimSets != null && !ValidateClaimSetReferences(obj, obj.ClaimSets))
+        {
+            errors.Add(new ValidationError("claim_sets must reference only defined claim IDs", "claim_sets"));
+        }
+
+        return errors.Count > 0 ? errors.Cast<Error>().ToArray() : Result.Success();
     }
 
     private static bool ValidateClaimSetReferences(IClaimsProvider provider, NonEmptyArray<NonEmptyArray<string>>? claimSets)

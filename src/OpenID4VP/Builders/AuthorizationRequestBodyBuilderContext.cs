@@ -61,8 +61,8 @@ public class AuthorizationRequestBodyBuilderContext
         var validator = new AuthorizationRequestValidator();
         var validationResult = validator.Validate(_request);
 
-        if (!validationResult.IsValid)
-            return validationResult.Errors.Select(e => new ValidationError(e, "validation_error")).ToArray();
+        if (!validationResult.IsSuccess)
+            return validationResult.Errors.ToArray();
 
         try
         {
@@ -72,7 +72,7 @@ public class AuthorizationRequestBodyBuilderContext
         catch (Exception ex)
         {
             return new ValidationError(
-                $"Failed to serialize Authorization Request to JSON: {ex.Message}", 
+                $"Failed to serialize Authorization Request to JSON: {ex.Message}",
                 "serialization_error");
         }
     }

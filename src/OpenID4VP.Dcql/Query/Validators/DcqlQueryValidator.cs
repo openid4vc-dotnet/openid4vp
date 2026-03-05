@@ -1,6 +1,7 @@
-using FluentValidation;
+using OpenID4VC.Core.Validation;
 using OpenID4VP.Dcql.Query.Models;
 using OpenID4VP.Dcql.Common;
+using OpenID4VC.Core.Results;
 
 namespace OpenID4VP.Dcql.Query.Validators;
 
@@ -8,43 +9,72 @@ namespace OpenID4VP.Dcql.Query.Validators;
 /// Validator for DcqlQuery according to OpenID4VP 1.0 specification.
 /// Single Responsibility: Only validates query structure (not cross-references).
 /// </summary>
-public class DcqlQueryValidator : AbstractValidator<DcqlQuery>
+public class DcqlQueryValidator : IValidator<DcqlQuery>
 {
-    public DcqlQueryValidator()
+    public Result Validate(DcqlQuery obj)
     {
-        // Structure validation
-        RuleFor(x => x.Credentials)
-            .NotNull()
-            .WithMessage("credentials is REQUIRED")
-            .Must(c => c.Count > 0)
-            .WithMessage("credentials must be a non-empty array");
+        var errors = new List<ValidationError>();
 
-        RuleFor(x => x.Credentials)
-            .Must(HaveUniqueIds)
-            .WithMessage("Credential query IDs must be unique")
-            .When(x => x.Credentials != null);
+        // Validate credentials is not null
+        if (obj.Credentials == null)
+        {
+            errors.Add(new ValidationError("credentials is REQUIRED", "credentials"));
+            return errors.Cast<Error>().ToArray();
+        }
 
-        RuleForEach(x => x.Credentials)
-            .SetValidator(new DcqlCredentialQueryValidator())
-            .When(x => x.Credentials != null);
+        // Validate credentials is non-empty
+        if (obj.Credentials.Count == 0)
+        {
+            errors.Add(new ValidationError("credentials must be a non-empty array", "credentials"));
+            return errors.Cast<Error>().ToArray();
+        }
 
-        RuleForEach(x => x.Credentials)
-            .SetValidator(new ClaimSetReferenceValidator())
-            .When(x => x.Credentials != null);
+        // Validate credential IDs are unique
+        var ids = obj.Credentials.Select(c => c.Id).ToList();
+        if (ids.Count != ids.Distinct().Count())
+        {
+            errors.Add(new ValidationError("Credential query IDs must be unique", "credentials"));
+        }
 
-        RuleFor(x => x.CredentialSets)
-            .Must(c => c == null || c.Count > 0)
-            .WithMessage("credential_sets must be null or non-empty array");
+        // Validate each credential query
+        var credentialValidator = new DcqlCredentialQueryValidator();
+        for (int i = 0; i < obj.Credentials.Count; i++)
+        {
+            var credentialResult = credentialValidator.Validate(obj.Credentials[i]);
+            if (!credentialResult.IsSuccess)
+            {
+                errors.AddRange(credentialResult.Errors.Cast<ValidationError>());
+            }
+        }
 
-        // Cross-reference validation delegated to specialized validator
-        RuleFor(x => x)
-            .SetValidator(new CredentialSetReferenceValidator())
-            .When(x => x.CredentialSets != null && x.Credentials != null);
-    }
+        // Validate claim set references in each credential
+        var claimSetValidator = new ClaimSetReferenceValidator();
+        for (int i = 0; i < obj.Credentials.Count; i++)
+        {
+            var claimSetResult = claimSetValidator.Validate(obj.Credentials[i]);
+            if (!claimSetResult.IsSuccess)
+            {
+                errors.AddRange(claimSetResult.Errors.Cast<ValidationError>());
+            }
+        }
 
-    private static bool HaveUniqueIds(NonEmptyArray<DcqlCredentialQuery> credentials)
-    {
-        var ids = credentials.Select(c => c.Id).ToList();
-        return ids.Count == ids.Distinct().Count();
+        // Validate credential_sets structure
+        if (obj.CredentialSets != null && obj.CredentialSets.Count == 0)
+        {
+            errors.Add(new ValidationError("credential_sets must be null or non-empty array", "credential_sets"));
+        }
+
+        // Validate credential set references
+        if (obj.CredentialSets != null && obj.Credentials != null)
+        {
+            var credentialSetValidator = new CredentialSetReferenceValidator();
+            var credentialSetResult = credentialSetValidator.Validate(obj);
+            if (!credentialSetResult.IsSuccess)
+            {
+                errors.AddRange(credentialSetResult.Errors.Cast<ValidationError>());
+            }
+        }
+
+        return errors.Count > 0 ? errors.Cast<Error>().ToArray() : Result.Success();
     }
 }

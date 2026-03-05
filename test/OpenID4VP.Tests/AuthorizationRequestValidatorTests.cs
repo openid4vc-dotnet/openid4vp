@@ -39,7 +39,7 @@ public class AuthorizationRequestValidatorTests
         var request = CreateValidRequest();
         var result = _validator.Validate(request);
 
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
         Assert.Empty(result.Errors);
     }
 
@@ -65,8 +65,8 @@ public class AuthorizationRequestValidatorTests
 
         var result = _validator.Validate(request);
 
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.Contains("Response type must be"));
+        Assert.False(result.IsSuccess);
+        Assert.Contains(result.Errors, e => e.Message.Contains("Response type must be"));
     }
 
     [Fact]
@@ -84,7 +84,7 @@ public class AuthorizationRequestValidatorTests
 
         var result = _validator.Validate(request);
 
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -102,7 +102,7 @@ public class AuthorizationRequestValidatorTests
 
         var result = _validator.Validate(request);
 
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -120,7 +120,7 @@ public class AuthorizationRequestValidatorTests
 
         var result = _validator.Validate(request);
 
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Theory]
@@ -140,7 +140,7 @@ public class AuthorizationRequestValidatorTests
 
         var result = _validator.Validate(request);
 
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Theory]
@@ -160,7 +160,7 @@ public class AuthorizationRequestValidatorTests
 
         var result = _validator.Validate(request);
 
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -178,7 +178,7 @@ public class AuthorizationRequestValidatorTests
 
         var result = _validator.Validate(request);
 
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -196,7 +196,7 @@ public class AuthorizationRequestValidatorTests
 
         var result = _validator.Validate(request);
 
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -214,7 +214,7 @@ public class AuthorizationRequestValidatorTests
 
         var result = _validator.Validate(request);
 
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -233,8 +233,8 @@ public class AuthorizationRequestValidatorTests
 
         var result = _validator.Validate(request);
 
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.Contains("State must contain only ASCII URL-safe characters"));
+        Assert.False(result.IsSuccess);
+        Assert.Contains(result.Errors, e => e.Message.Contains("State must contain only ASCII URL-safe characters"));
     }
 
     [Fact]
@@ -253,7 +253,7 @@ public class AuthorizationRequestValidatorTests
 
         var result = _validator.Validate(request);
 
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -272,8 +272,8 @@ public class AuthorizationRequestValidatorTests
 
         var result = _validator.Validate(request);
 
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.Contains("Request URI method must be"));
+        Assert.False(result.IsSuccess);
+        Assert.Contains(result.Errors, e => e.Message.Contains("Request URI method must be"));
     }
 
     [Theory]
@@ -294,7 +294,7 @@ public class AuthorizationRequestValidatorTests
 
         var result = _validator.Validate(request);
 
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -312,7 +312,7 @@ public class AuthorizationRequestValidatorTests
 
         var result = _validator.Validate(request);
 
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -344,7 +344,7 @@ public class AuthorizationRequestValidatorTests
         var result = _validator.Validate(request);
 
         // Should be valid - default A128GCM is implicitly used (SHOULD be absent per spec)
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
         Assert.Empty(result.Errors);
         // Verify enc values are indeed absent/null
         Assert.Null(request.ClientMetadata?.EncryptedResponseEncValuesSupported);

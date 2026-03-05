@@ -1,6 +1,7 @@
-using FluentValidation;
+using OpenID4VC.Core.Validation;
 using OpenID4VP.Dcql.Query.Models;
 using OpenID4VP.Dcql.Common;
+using OpenID4VC.Core.Results;
 
 namespace OpenID4VP.Dcql.Query.Validators;
 
@@ -8,35 +9,56 @@ namespace OpenID4VP.Dcql.Query.Validators;
 /// Validator for DcqlCredentialQuery and its derived types.
 /// Depends on: IClaimsProvider abstraction (DIP) for accessing claims
 /// </summary>
-public class DcqlCredentialQueryValidator : AbstractValidator<DcqlCredentialQuery>
+public class DcqlCredentialQueryValidator : IValidator<DcqlCredentialQuery>
 {
-    public DcqlCredentialQueryValidator()
+    public Result Validate(DcqlCredentialQuery obj)
     {
-        RuleFor(x => x.Id)
-            .NotEmpty()
-            .WithMessage("id is REQUIRED")
-            .Must(ValidationPatterns.IsValidId)
-            .WithMessage("id must contain only alphanumeric, underscore, or hyphen characters");
+        var errors = new List<ValidationError>();
 
-        RuleFor(x => x.Format)
-            .NotEmpty()
-            .WithMessage("format is REQUIRED")
-            .Must(f => new[] { CredentialFormats.MsoMdoc, CredentialFormats.JwtVcJson, CredentialFormats.LdpVc, CredentialFormats.VcSdJwt, CredentialFormats.DcSdJwt }.Contains(f))
-            .WithMessage($"format must be one of: {CredentialFormats.MsoMdoc}, {CredentialFormats.JwtVcJson}, {CredentialFormats.LdpVc}, {CredentialFormats.VcSdJwt}, {CredentialFormats.DcSdJwt}");
+        // Validate ID is not empty
+        if (string.IsNullOrEmpty(obj.Id))
+        {
+            errors.Add(new ValidationError("id is REQUIRED", "id"));
+        }
+        else if (!OpenID4VP.Dcql.Common.ValidationPatterns.IsValidId(obj.Id))
+        {
+            errors.Add(new ValidationError("id must contain only alphanumeric, underscore, or hyphen characters", "id"));
+        }
 
-        RuleFor(x => x.ClaimSets)
-            .Must(ValidateClaimSetReferences)
-            .WithMessage("claim_sets must reference only defined claim IDs")
-            .When(x => x.ClaimSets != null);
+        // Validate format is not empty
+        if (string.IsNullOrEmpty(obj.Format))
+        {
+            errors.Add(new ValidationError("format is REQUIRED", "format"));
+        }
+        else
+        {
+            var validFormats = new[] { CredentialFormats.MsoMdoc, CredentialFormats.JwtVcJson, CredentialFormats.LdpVc, CredentialFormats.VcSdJwt, CredentialFormats.DcSdJwt };
+            if (!validFormats.Contains(obj.Format))
+            {
+                errors.Add(new ValidationError($"format must be one of: {CredentialFormats.MsoMdoc}, {CredentialFormats.JwtVcJson}, {CredentialFormats.LdpVc}, {CredentialFormats.VcSdJwt}, {CredentialFormats.DcSdJwt}", "format"));
+            }
+        }
 
-        // Format-specific validation
-        RuleFor(x => x)
-            .Must(x => x is not W3cVcCredentialQuery w3c || w3c.Meta != null)
-            .WithMessage("meta is REQUIRED for W3C VC format");
+        // Validate claim set references
+        if (obj.ClaimSets != null && !ValidateClaimSetReferences(obj, obj.ClaimSets))
+        {
+            errors.Add(new ValidationError("claim_sets must reference only defined claim IDs", "claim_sets"));
+        }
 
-        RuleFor(x => x)
-            .Must(x => x is not W3cVcCredentialQuery w3c || w3c.Meta?.TypeValues?.Count > 0)
-            .WithMessage("type_values is REQUIRED and must be non-empty for W3C VC format");
+        // Validate format-specific constraints
+        if (obj is W3cVcCredentialQuery w3c)
+        {
+            if (w3c.Meta == null)
+            {
+                errors.Add(new ValidationError("meta is REQUIRED for W3C VC format", "meta"));
+            }
+            else if (w3c.Meta.TypeValues == null || w3c.Meta.TypeValues.Count == 0)
+            {
+                errors.Add(new ValidationError("type_values is REQUIRED and must be non-empty for W3C VC format", "type_values"));
+            }
+        }
+
+        return errors.Count > 0 ? errors.Cast<Error>().ToArray() : Result.Success();
     }
 
     private static bool ValidateClaimSetReferences(IClaimsProvider provider, NonEmptyArray<NonEmptyArray<string>>? claimSets)

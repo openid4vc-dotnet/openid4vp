@@ -1,5 +1,6 @@
 using OpenID4VP.Common;
 using OpenID4VP.Models;
+using OpenID4VC.Core.Results;
 
 namespace OpenID4VP.Validators
 {
@@ -24,69 +25,69 @@ namespace OpenID4VP.Validators
     /// </summary>
     public sealed class CrossDeviceAuthorizationRequestValidator : IValidator<AuthorizationRequest>
     {
-        public ValidationResult Validate(AuthorizationRequest request)
+        public Result Validate(AuthorizationRequest request)
         {
-            var errors = new List<string>();
+            var errors = new List<ValidationError>();
 
             // Check required: client_id (always required)
             if (string.IsNullOrEmpty(request.ClientId))
             {
-                errors.Add("client_id is REQUIRED");
+                errors.Add(new ValidationError("client_id is REQUIRED", "client_id"));
             }
 
             // Check required: request_uri (for cross-device mode)
             if (string.IsNullOrEmpty(request.RequestUri))
             {
-                errors.Add("request_uri is REQUIRED for cross-device mode. " +
-                          "It points to the endpoint where the wallet fetches the full RequestObject");
+                errors.Add(new ValidationError("request_uri is REQUIRED for cross-device mode. " +
+                          "It points to the endpoint where the wallet fetches the full RequestObject", "request_uri"));
             }
 
             // Check required: nonce (REQUIRED per OpenID4VP spec Section 5.2)
             if (string.IsNullOrEmpty(request.Nonce))
             {
-                errors.Add("nonce is REQUIRED for cross-device mode. " +
-                          "Per spec: 'nonce: REQUIRED... for every Authorization Request'");
+                errors.Add(new ValidationError("nonce is REQUIRED for cross-device mode. " +
+                          "Per spec: 'nonce: REQUIRED... for every Authorization Request'", "nonce"));
             }
 
             // Check forbidden: response_type
             // response_type should NOT be set in cross-device mode (it's in the RequestObject, not the minimal request)
             if (!string.IsNullOrEmpty(request.ResponseType))
             {
-                errors.Add("response_type MUST NOT be set in cross-device mode minimal request. " +
-                          "Include it in the RequestObject on the request_uri endpoint instead");
+                errors.Add(new ValidationError("response_type MUST NOT be set in cross-device mode minimal request. " +
+                          "Include it in the RequestObject on the request_uri endpoint instead", "response_type"));
             }
 
             // Check forbidden: dcql_query
             if (request.DcqlQuery != null)
             {
-                errors.Add("dcql_query MUST NOT be set in cross-device mode minimal request. " +
-                          "Include it in the RequestObject on the request_uri endpoint instead");
+                errors.Add(new ValidationError("dcql_query MUST NOT be set in cross-device mode minimal request. " +
+                          "Include it in the RequestObject on the request_uri endpoint instead", "dcql_query"));
             }
 
             // Check forbidden: scope
             if (!string.IsNullOrEmpty(request.Scope))
             {
-                errors.Add("scope MUST NOT be set in cross-device mode minimal request. " +
-                          "Include it in the RequestObject on the request_uri endpoint instead");
+                errors.Add(new ValidationError("scope MUST NOT be set in cross-device mode minimal request. " +
+                          "Include it in the RequestObject on the request_uri endpoint instead", "scope"));
             }
 
             // Check forbidden: redirect_uri
             if (!string.IsNullOrEmpty(request.RedirectUri))
             {
-                errors.Add("redirect_uri MUST NOT be set in cross-device mode. " +
-                          "Cross-device uses response_uri from the RequestObject for response delivery");
+                errors.Add(new ValidationError("redirect_uri MUST NOT be set in cross-device mode. " +
+                          "Cross-device uses response_uri from the RequestObject for response delivery", "redirect_uri"));
             }
 
             // Check forbidden: response_uri
             if (!string.IsNullOrEmpty(request.ResponseUri))
             {
-                errors.Add("response_uri MUST NOT be set in cross-device mode minimal request. " +
-                          "It comes from the RequestObject retrieved from request_uri");
+                errors.Add(new ValidationError("response_uri MUST NOT be set in cross-device mode minimal request. " +
+                          "It comes from the RequestObject retrieved from request_uri", "response_uri"));
             }
 
             return errors.Count == 0
-                ? ValidationResult.Success()
-                : ValidationResult.Failure(errors);
+                ? Result.Success()
+                : errors.Cast<Error>().ToArray();
         }
     }
 }

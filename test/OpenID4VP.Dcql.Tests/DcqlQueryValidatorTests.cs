@@ -27,7 +27,7 @@ public class DcqlQueryValidatorTests
         var result = _validator.Validate(query);
 
         // Assert
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
         Assert.Empty(result.Errors);
     }
 
@@ -54,7 +54,7 @@ public class DcqlQueryValidatorTests
         var result = _validator.Validate(query);
 
         // Assert
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -76,8 +76,8 @@ public class DcqlQueryValidatorTests
         var result = _validator.Validate(query);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.ErrorMessage.Contains("unique"));
+        Assert.False(result.IsSuccess);
+        Assert.True(result.Errors.Any(e => e.Message.Contains("unique")));
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public class DcqlQueryValidatorTests
         var result = _validator.Validate(query);
 
         // Assert
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -123,7 +123,7 @@ public class DcqlQueryValidatorTests
         var result = _validator.Validate(query);
 
         // Assert
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -141,7 +141,7 @@ public class DcqlQueryValidatorTests
         var result = _validator.Validate(query);
 
         // Assert
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
         Assert.Null(query.CredentialSets);
     }
 
@@ -160,7 +160,7 @@ public class DcqlQueryValidatorTests
         var result = _validator.Validate(query);
 
         // Assert
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -194,7 +194,7 @@ public class DcqlQueryValidatorTests
         var result = _validator.Validate(query);
 
         // Assert
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
         Assert.Equal(5, query.Credentials.Count);
     }
 
@@ -217,7 +217,7 @@ public class DcqlQueryValidatorTests
         var result = _validator.Validate(query);
 
         // Assert
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -249,7 +249,7 @@ public class DcqlQueryValidatorTests
         var result = _validator.Validate(query);
 
         // Assert
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
         Assert.NotNull(query.CredentialSets);
     }
 
@@ -268,7 +268,7 @@ public class DcqlQueryValidatorTests
         var result = _validator.Validate(query);
 
         // Assert
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -294,7 +294,7 @@ public class DcqlQueryValidatorTests
         var result = _validator.Validate(query);
 
         // Assert
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -315,7 +315,7 @@ public class DcqlQueryValidatorTests
         var result = _validator.Validate(query);
 
         // Assert
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -337,7 +337,7 @@ public class DcqlQueryValidatorTests
         var result = _validator.Validate(query);
 
         // Assert
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -355,7 +355,7 @@ public class DcqlQueryValidatorTests
         var result = _validator.Validate(query);
 
         // Assert
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -389,7 +389,7 @@ public class DcqlQueryValidatorTests
         var result = _validator.Validate(query);
 
         // Assert
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
         Assert.Equal(2, query.CredentialSets!.Count);
     }
 
@@ -410,7 +410,7 @@ public class DcqlQueryValidatorTests
         var result = _validator.Validate(query);
 
         // Assert
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -430,7 +430,7 @@ public class DcqlQueryValidatorTests
         var result = _validator.Validate(query);
 
         // Assert
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -456,7 +456,7 @@ public class DcqlQueryValidatorTests
         var result = _validator.Validate(query);
 
         // Assert
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -482,7 +482,7 @@ public class DcqlQueryValidatorTests
         var result = _validator.Validate(query);
 
         // Assert - If delegated validators weren't working, validation might fail differently
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -506,7 +506,7 @@ public class DcqlQueryValidatorTests
         var result = _validator.Validate(query);
 
         // Assert
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -525,7 +525,7 @@ public class DcqlQueryValidatorTests
         var result = _validator.Validate(query);
 
         // Assert
-        Assert.True(result.IsValid);
+        Assert.True(result.IsSuccess);
         Assert.Equal(CredentialFormats.MsoMdoc, query.Credentials[0].Format);
         Assert.Equal(CredentialFormats.JwtVcJson, query.Credentials[1].Format);
         Assert.Equal(CredentialFormats.LdpVc, query.Credentials[2].Format);
@@ -533,4 +533,6 @@ public class DcqlQueryValidatorTests
         Assert.Equal(CredentialFormats.DcSdJwt, query.Credentials[4].Format);
     }
 }
+
+
 

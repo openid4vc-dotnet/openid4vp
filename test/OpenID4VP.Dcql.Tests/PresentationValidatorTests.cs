@@ -7,7 +7,7 @@ namespace OpenID4VP.Dcql.Tests;
 public class PresentationValidatorTests
 {
     [Fact]
-    public void Validate_WithValidPresentation_ShouldReturnTrue()
+    public void Validate_WithValidPresentation_ShouldReturnSuccess()
     {
         // Arrange
         var query = DcqlQueryBuilder.Create()
@@ -31,11 +31,11 @@ public class PresentationValidatorTests
         var result = validator.Validate(presentation, query);
 
         // Assert
-        Assert.True(result);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
-    public void Validate_WithPresentationIdNotInQuery_ShouldReturnFalse()
+    public void Validate_WithPresentationIdNotInQuery_ShouldReturnFailure()
     {
         // Arrange
         var query = DcqlQueryBuilder.Create()
@@ -59,11 +59,12 @@ public class PresentationValidatorTests
         var result = validator.Validate(presentation, query);
 
         // Assert
-        Assert.False(result);
+        Assert.False(result.IsSuccess);
+        Assert.Contains(result.Errors, e => e.Message.Contains("does not exist in query"));
     }
 
     [Fact]
-    public void Validate_WithMultipleCredentials_ValidPresentation_ShouldReturnTrue()
+    public void Validate_WithMultipleCredentials_ValidPresentation_ShouldReturnSuccess()
     {
         // Arrange
         var query = DcqlQueryBuilder.Create()
@@ -92,11 +93,11 @@ public class PresentationValidatorTests
         var result = validator.Validate(presentation, query);
 
         // Assert
-        Assert.True(result);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
-    public void Validate_WithMultipleCredentialsPartialPresentation_ShouldReturnTrue()
+    public void Validate_WithMultipleCredentialsPartialPresentation_ShouldReturnSuccess()
     {
         // Arrange - only one credential required
         var query = DcqlQueryBuilder.Create()
@@ -125,11 +126,11 @@ public class PresentationValidatorTests
         var result = validator.Validate(presentation, query);
 
         // Assert
-        Assert.True(result);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
-    public void Validate_WithMultipleConstraintViolation_ShouldReturnFalse()
+    public void Validate_WithMultipleConstraintViolation_ShouldReturnFailure()
     {
         // Arrange - credential1 has multiple=false but we provide 2 presentations
         var query = DcqlQueryBuilder.Create()
@@ -155,11 +156,12 @@ public class PresentationValidatorTests
         var result = validator.Validate(presentation, query);
 
         // Assert
-        Assert.False(result);
+        Assert.False(result.IsSuccess);
+        Assert.Contains(result.Errors, e => e.Message.Contains("does not allow multiple presentations"));
     }
 
     [Fact]
-    public void Validate_WithMultipleConstraintAllowed_ShouldReturnTrue()
+    public void Validate_WithMultipleConstraintAllowed_ShouldReturnSuccess()
     {
         // Arrange - credential1 has multiple=true so we can provide 2 presentations
         var query = DcqlQueryBuilder.Create()
@@ -185,11 +187,11 @@ public class PresentationValidatorTests
         var result = validator.Validate(presentation, query);
 
         // Assert
-        Assert.True(result);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
-    public void Validate_WithEmptyPresentation_ShouldReturnTrue()
+    public void Validate_WithEmptyPresentation_ShouldReturnSuccess()
     {
         // Arrange - query has credentials but presentation is empty (all optional)
         var query = DcqlQueryBuilder.Create()
@@ -210,91 +212,11 @@ public class PresentationValidatorTests
         var result = validator.Validate(presentation, query);
 
         // Assert
-        Assert.True(result);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
-    public void IsValidFor_ExtensionMethod_ShouldWork()
-    {
-        // Arrange
-        var query = DcqlQueryBuilder.Create()
-            .AddSdJwtVcCredential("credential1", credential =>
-            {
-                credential.AddVctValues("https://example.com/vc");
-            })
-            .Build();
-
-        var presentation = new DcqlPresentation
-        {
-            Presentations = new Dictionary<string, PresentationEntry>
-            {
-                { "credential1", new PresentationEntry("jwt_token") }
-            }
-        };
-
-        // Act
-        var result = presentation.IsValidFor(query);
-
-        // Assert
-        Assert.True(result);
-    }
-
-    [Fact]
-    public void IsValidFor_ExtensionMethod_WithInvalidPresentation_ShouldReturnFalse()
-    {
-        // Arrange
-        var query = DcqlQueryBuilder.Create()
-            .AddSdJwtVcCredential("credential1", credential =>
-            {
-                credential.AddVctValues("https://example.com/vc");
-            })
-            .Build();
-
-        var presentation = new DcqlPresentation
-        {
-            Presentations = new Dictionary<string, PresentationEntry>
-            {
-                { "unknown", new PresentationEntry("jwt_token") }
-            }
-        };
-
-        // Act
-        var result = presentation.IsValidFor(query);
-
-        // Assert
-        Assert.False(result);
-    }
-
-    [Fact]
-    public void IsValidFor_WithCustomValidator_ShouldUseProvidedValidator()
-    {
-        // Arrange
-        var query = DcqlQueryBuilder.Create()
-            .AddSdJwtVcCredential("credential1", credential =>
-            {
-                credential.AddVctValues("https://example.com/vc");
-            })
-            .Build();
-
-        var presentation = new DcqlPresentation
-        {
-            Presentations = new Dictionary<string, PresentationEntry>
-            {
-                { "credential1", new PresentationEntry("jwt_token") }
-            }
-        };
-
-        var customValidator = new PresentationValidator();
-
-        // Act
-        var result = presentation.IsValidFor(query, customValidator);
-
-        // Assert
-        Assert.True(result);
-    }
-
-    [Fact]
-    public void Validate_WithMdocCredential_ValidPresentation_ShouldReturnTrue()
+    public void Validate_WithMdocCredential_ValidPresentation_ShouldReturnSuccess()
     {
         // Arrange
         var query = DcqlQueryBuilder.Create()
@@ -318,11 +240,11 @@ public class PresentationValidatorTests
         var result = validator.Validate(presentation, query);
 
         // Assert
-        Assert.True(result);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
-    public void Validate_MixedFormats_ValidPresentation_ShouldReturnTrue()
+    public void Validate_MixedFormats_ValidPresentation_ShouldReturnSuccess()
     {
         // Arrange - multiple different credential formats
         var query = DcqlQueryBuilder.Create()
@@ -351,6 +273,6 @@ public class PresentationValidatorTests
         var result = validator.Validate(presentation, query);
 
         // Assert
-        Assert.True(result);
+        Assert.True(result.IsSuccess);
     }
 }

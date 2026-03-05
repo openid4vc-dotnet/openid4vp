@@ -1,7 +1,9 @@
 ﻿namespace OpenID4VP.Parsers;
 
-using System.Text.Json;
 using OpenID4VC.Core.Results;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 
 internal static class ParserErrors
 {
