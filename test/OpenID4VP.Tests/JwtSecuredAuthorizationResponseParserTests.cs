@@ -1,8 +1,5 @@
 using Microsoft.IdentityModel.Tokens;
 using OpenID4VP.Parsers;
-using Xunit;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Cryptography;
 
 namespace OpenID4VP.Tests.Parsers;
 

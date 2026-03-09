@@ -76,8 +76,20 @@ public sealed class AuthorizationResponseValidator : IValidator<AuthorizationRes
             return;
         }
 
-        if (vpToken.Presentations == null)
-            errors.Add(new ValidationError("VP Token presentations cannot be null", "vp_token"));
+        if (vpToken.Presentations == null || vpToken.Presentations.Count == 0)
+            errors.Add(new ValidationError("VP Token presentations dictionary cannot be empty", "vp_token"));
+        else
+        {
+            // Ensure all presentation IDs are non-empty
+            foreach (var kvp in vpToken.Presentations)
+            {
+                if (string.IsNullOrEmpty(kvp.Key))
+                    errors.Add(new ValidationError("Presentation ID cannot be empty", "vp_token"));
+                
+                if (kvp.Value == null || kvp.Value.Count == 0)
+                    errors.Add(new ValidationError($"Presentation entry for ID '{kvp.Key}' cannot be empty", "vp_token"));
+            }
+        }
     }
 
     private static void ValidateState(string? state, List<ValidationError> errors)

@@ -62,19 +62,12 @@ public sealed class AuthorizationResponseParser
         if (!json.TryGetProperty("vp_token", out var vpTokenElement))
             return ParserErrors.MissingVpTokenProperty();
 
-        // Parse the VP Token - create a wrapper object if vp_token is not already an object
-        var presentations = vpTokenElement.ValueKind switch
-        {
-            JsonValueKind.String => (object)(vpTokenElement.GetString() ?? ""),
-            JsonValueKind.Array => vpTokenElement.Clone(),
-            JsonValueKind.Object => vpTokenElement.Clone(),
-            _ => null
-        };
+        // Use VpTokenParser to parse the vp_token
+        var vpTokenResult = _vpTokenParser.Parse(json);
+        if (!vpTokenResult.IsSuccess)
+            return vpTokenResult.Errors[0];
 
-        if (presentations == null)
-            return ParserErrors.InvalidVpTokenType(vpTokenElement.ValueKind);
-
-        var vpToken = new VpToken { Presentations = presentations };
+        var vpToken = vpTokenResult.Value!;
 
         // Parse optional state
         var state = json.TryGetProperty("state", out var stateElement) && stateElement.ValueKind == JsonValueKind.String 

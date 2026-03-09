@@ -236,7 +236,7 @@ public sealed class AuthorizationRequestBuilder
     ///     .WithName("MyVerifier")
     ///     .WithLogoUri("https://example.com/logo.png")
     ///     .WithJwksUri("https://example.com/jwks.json")
-    ///     .WithPublicKeyFromRsaPrivateKey(rsaKey))
+    ///     .WithPublicKeyForResponseEncryption(publicKey))
     /// </code>
     /// </summary>
     /// <param name="configure">Callback to configure the ClientMetadata context</param>

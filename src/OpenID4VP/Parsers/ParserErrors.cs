@@ -33,4 +33,7 @@ internal static class ParserErrors
     // VpToken specific
     public static Error NullVpTokenJson() 
         => new ParseError("VP Token JSON cannot be null", "");
+
+    public static Error InvalidVpTokenStructure(InvalidOperationException ex)
+        => new ParseError($"Invalid VP Token structure: {ex.Message}", "");
 }

@@ -15,14 +15,14 @@ namespace OpenID4VP.Builders;
 /// - Response encryption algorithm preferences
 /// - Supported VP formats, and more
 /// 
-/// Pattern: .WithClientMetadata(metadata => metadata.WithName(...).WithJwks(...))
+/// Pattern: .WithClientMetadata(metadata => metadata.WithName(...).WithJwk(...))
 /// </summary>
 public sealed class ClientMetadataBuilderContext
 {
     private string? _clientName;
     private string? _logoUri;
     private string? _jwksUri;
-    private JsonWebKeySet? _jwks;  // Single collection for all keys (from WithJwks or WithPublicKey* methods)
+    private JsonWebKeySet? _jwks;
     private List<string>? _encryptedResponseEncValues;
     private VpFormatsSupported? _vpFormatsSupported;
     private Dictionary<string, JsonElement>? _extensionData;
@@ -61,7 +61,7 @@ public sealed class ClientMetadataBuilderContext
     }
 
     /// <summary>
-    /// Sets the JWKS (JSON Web Key Set) containing public keys for encrypting the authorization response.
+    /// Adds a JWK (JSON Web Key) containing public keys for encrypting the authorization response.
     /// The Wallet uses these public keys to encrypt the VP Token that is returned in the authorization response.
     /// 
     /// The JWKS must contain ONLY public keys, and each key MUST have:
@@ -69,153 +69,23 @@ public sealed class ClientMetadataBuilderContext
     /// - "alg" (Algorithm) - for the wallet to know which algorithm this key supports
     /// - "use" (Key Usage) - must be "enc" (encryption) since these keys are for encrypting the response
     /// 
-    /// Validation of the JWKS (private keys, required fields) is deferred to Build() to allow
+    /// Validation of the JWK (private keys, required fields) is deferred to Build() to allow
     /// accumulation of multiple keys and batch validation.
     /// </summary>
-    public ClientMetadataBuilderContext WithJwks(JsonWebKeySet? jwks)
+    public ClientMetadataBuilderContext WithPublicKeyForResponseEncryption(JsonWebKey jwk)
     {
-        if (jwks == null || jwks.Keys.Count == 0)
-            return this;
-
         try
         {
             // Add all keys from the provided JWKS to the collection
             _jwks ??= new JsonWebKeySet();
-            foreach (var key in jwks.Keys)
-            {
-                _jwks.Keys.Add(key);
-            }
+
+            _jwks.Keys.Add(jwk);
         }
         catch (Exception ex)
         {
             _errors.Add(new ValidationError($"Failed to add keys from JWKS: {ex.Message}", "key_addition_error"));
         }
 
-        return this;
-    }
-
-    /// <summary>
-    /// Adds a public key extracted from an RSA private key to the JWKS.
-    /// This method can be called multiple times to compose a set of keys.
-    /// The extracted public key will be used by the Wallet to encrypt the authorization response.
-    /// 
-    /// The RSA key MUST have a KeyId set - this will be used as the 'kid' in the JWKS.
-    /// </summary>
-    /// <param name="rsaPrivateKey">RSA private key from which to extract the public key. Must have KeyId set.</param>
-    /// <param name="alg">The key encryption algorithm (e.g., RSA-OAEP-256). Default: RSA-OAEP-256</param>
-    /// <param name="enc">The content encryption algorithm (e.g., A256GCM). Default: A256GCM</param>
-    public ClientMetadataBuilderContext WithPublicKeyFromRsaPrivateKey(
-        RsaSecurityKey? rsaPrivateKey,
-        string alg = "RSA-OAEP-256",
-        string enc = "A256GCM")
-    {
-        if (rsaPrivateKey == null)
-        {
-            _errors.Add(new ValidationError("RSA private key cannot be null", "validation_error"));
-            return this;
-        }
-
-        if (string.IsNullOrWhiteSpace(rsaPrivateKey.KeyId))
-        {
-            _errors.Add(new ValidationError("RSA private key must have a KeyId set", "missing_key_id"));
-            return this;
-        }
-
-        var jwkResult = JwksBuilder.CreatePublicKey(rsaPrivateKey, rsaPrivateKey.KeyId, keyUsage: "enc");
-        if (!jwkResult.IsSuccess)
-        {
-            _errors.AddRange(jwkResult.Errors);
-            return this;
-        }
-
-        try
-        {
-            // Add the key to the collection
-            _jwks ??= new JsonWebKeySet();
-            var jwk = jwkResult.Value;
-            jwk.Alg = alg;
-            _jwks.Keys.Add(jwk);
-        }
-        catch (Exception ex)
-        {
-            _errors.Add(new ValidationError($"Failed to add RSA key to JWKS: {ex.Message}", "key_addition_error"));
-        }
-
-        // Add the explicit enc algorithm
-        AddEncryptedResponseEncValue(enc);
-
-        return this;
-    }
-
-    /// <summary>
-    /// Adds a public key extracted from an ECDSA private key to the JWKS.
-    /// This method can be called multiple times to compose a set of keys.
-    /// The extracted public key will be used by the Wallet to encrypt the authorization response.
-    /// 
-    /// The ECDSA key MUST have a KeyId set - this will be used as the 'kid' in the JWKS.
-    /// </summary>
-    /// <param name="ecdsaPrivateKey">ECDSA private key from which to extract the public key. Must have KeyId set.</param>
-    /// <param name="alg">The key encryption algorithm (e.g., ECDH-ES+A256KW). Default: ECDH-ES+A256KW</param>
-    /// <param name="enc">The content encryption algorithm (e.g., A256GCM). Default: A256GCM</param>
-    public ClientMetadataBuilderContext WithPublicKeyFromEcdsaPrivateKey(
-        ECDsaSecurityKey? ecdsaPrivateKey,
-        string alg = "ECDH-ES+A256KW",
-        string enc = "A256GCM")
-    {
-        if (ecdsaPrivateKey == null)
-        {
-            _errors.Add(new ValidationError("ECDSA private key cannot be null", "validation_error"));
-            return this;
-        }
-
-        if (string.IsNullOrWhiteSpace(ecdsaPrivateKey.KeyId))
-        {
-            _errors.Add(new ValidationError("ECDSA private key must have a KeyId set", "missing_key_id"));
-            return this;
-        }
-
-        var jwkResult = JwksBuilder.CreatePublicKey(ecdsaPrivateKey, ecdsaPrivateKey.KeyId, keyUsage: "enc");
-        if (!jwkResult.IsSuccess)
-        {
-            _errors.AddRange(jwkResult.Errors);
-            return this;
-        }
-
-        try
-        {
-            // Add the key to the collection
-            _jwks ??= new JsonWebKeySet();
-            var jwk = jwkResult.Value;
-            jwk.Alg = alg;
-            _jwks.Keys.Add(jwk);
-        }
-        catch (Exception ex)
-        {
-            _errors.Add(new ValidationError($"Failed to add ECDSA key to JWKS: {ex.Message}", "key_addition_error"));
-        }
-
-        // Add the explicit enc algorithm
-        AddEncryptedResponseEncValue(enc);
-
-        return this;
-    }
-
-
-
-    /// <summary>
-    /// Adds an encryption algorithm to the supported encrypted response enc values.
-    /// INTERNAL USE ONLY - automatically called by WithPublicKeysFromRsaPrivateKey and WithPublicKeysFromEcdsaPrivateKey.
-    /// </summary>
-    private ClientMetadataBuilderContext AddEncryptedResponseEncValue(string encAlgorithm)
-    {
-        if (string.IsNullOrWhiteSpace(encAlgorithm))
-        {
-            _errors.Add(new ValidationError("Encryption algorithm cannot be null or empty", "validation_error"));
-            return this;
-        }
-
-        _encryptedResponseEncValues ??= [];
-        _encryptedResponseEncValues.Add(encAlgorithm);
         return this;
     }
 

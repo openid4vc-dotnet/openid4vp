@@ -14,7 +14,9 @@ public class AuthorizationResponseParserTests
     public void Parse_ValidResponseWithVpTokenOnly_ReturnsAuthorizationResponse()
     {
         var json = @"{ 
-            ""vp_token"": ""eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9...""
+            ""vp_token"": {
+                ""credential1"": [""eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9...""]
+            }
         }";
         
         var result = _parser.Parse(json);
@@ -23,6 +25,7 @@ public class AuthorizationResponseParserTests
         var response = result.Value!;
         Assert.NotNull(response);
         Assert.NotNull(response.VpToken);
+        Assert.Single(response.VpToken.Presentations);
         Assert.Null(response.State);
         Assert.Null(response.IdToken);
     }
@@ -31,7 +34,9 @@ public class AuthorizationResponseParserTests
     public void Parse_ResponseWithVpTokenAndState_ReturnsAuthorizationResponse()
     {
         var json = @"{ 
-            ""vp_token"": ""eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9..."",
+            ""vp_token"": {
+                ""credential1"": [""eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9...""]
+            },
             ""state"": ""state-abc-123""
         }";
         
@@ -41,6 +46,7 @@ public class AuthorizationResponseParserTests
         var response = result.Value!;
         Assert.NotNull(response);
         Assert.NotNull(response.VpToken);
+        Assert.Single(response.VpToken.Presentations);
         Assert.Equal("state-abc-123", response.State);
         Assert.Null(response.IdToken);
     }
@@ -49,7 +55,9 @@ public class AuthorizationResponseParserTests
     public void Parse_ResponseWithVpTokenStateAndIdToken_ReturnsAuthorizationResponse()
     {
         var json = @"{ 
-            ""vp_token"": ""eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9..."",
+            ""vp_token"": {
+                ""credential1"": [""eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9...""]
+            },
             ""state"": ""state-123"",
             ""id_token"": ""eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9...id""
         }";
@@ -60,18 +68,19 @@ public class AuthorizationResponseParserTests
         var response = result.Value!;
         Assert.NotNull(response);
         Assert.NotNull(response.VpToken);
+        Assert.Single(response.VpToken.Presentations);
         Assert.Equal("state-123", response.State);
         Assert.Equal("eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9...id", response.IdToken);
     }
 
     [Fact]
-    public void Parse_ResponseWithArrayVpToken_ReturnsAuthorizationResponse()
+    public void Parse_ResponseWithMultipleVpTokenEntries_ReturnsAuthorizationResponse()
     {
         var json = @"{ 
-            ""vp_token"": [
-                ""jwt1..."",
-                ""jwt2...""
-            ]
+            ""vp_token"": {
+                ""credential1"": [""jwt1...""],
+                ""credential2"": [""jwt2..."", ""jwt3...""]
+            }
         }";
         
         var result = _parser.Parse(json);
@@ -80,6 +89,7 @@ public class AuthorizationResponseParserTests
         var response = result.Value!;
         Assert.NotNull(response);
         Assert.NotNull(response.VpToken);
+        Assert.Equal(2, response.VpToken.Presentations.Count);
     }
 
     [Fact]
@@ -142,7 +152,9 @@ public class AuthorizationResponseParserTests
     public void Parse_CaseSensitiveProperties_ReturnsParserError()
     {
         var json = @"{ 
-            ""VP_Token"": ""jwt..."",
+            ""VP_Token"": {
+                ""credential1"": [""jwt...""]
+            },
             ""STATE"": ""state-123""
         }";
         
@@ -158,11 +170,13 @@ public class AuthorizationResponseParserTests
     {
         var json = @"{ 
             ""vp_token"": {
-                ""format"": ""jwt_vp_json"",
-                ""presentation"": ""eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9..."",
-                ""metadata"": {
-                    ""issuer"": ""https://wallet.example.com""
-                }
+                ""credential1"": [
+                    {
+                        ""@context"": [""https://www.w3.org/2018/credentials/v1""],
+                        ""type"": [""VerifiablePresentation""],
+                        ""verifiableCredential"": [""vc1""]
+                    }
+                ]
             },
             ""state"": ""complex-state-123"",
             ""id_token"": ""eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9...id"",
@@ -175,6 +189,7 @@ public class AuthorizationResponseParserTests
         var response = result.Value!;
         Assert.NotNull(response);
         Assert.NotNull(response.VpToken);
+        Assert.Single(response.VpToken.Presentations);
         Assert.Equal("complex-state-123", response.State);
         Assert.Equal("eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9...id", response.IdToken);
     }

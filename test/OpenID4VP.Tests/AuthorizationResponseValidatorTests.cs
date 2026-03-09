@@ -14,8 +14,8 @@ public class AuthorizationResponseValidatorTests
 
     private AuthorizationResponse CreateValidResponse()
     {
-        var json = @"{ ""vp_token"": ""jwt..."", ""state"": ""state-123"" }";
-        return _parser.Parse(json);
+        var json = @"{ ""vp_token"": { ""credential1"": [""jwt...""] }, ""state"": ""state-123"" }";
+        return _parser.Parse(json).Value!;
     }
 
     [Fact]
@@ -32,23 +32,25 @@ public class AuthorizationResponseValidatorTests
     [Fact]
     public void Validate_ResponseWithoutState_ReturnsSuccess()
     {
-        var json = @"{ ""vp_token"": ""jwt..."" }";
-        var response = _parser.Parse(json);
+        var json = @"{ ""vp_token"": { ""credential1"": [""jwt...""] } }";
+        var result = _parser.Parse(json);
+        var response = result.Value!;
         
-        var result = _validator.Validate(response);
+        var validationResult = _validator.Validate(response);
         
-        Assert.True(result.IsSuccess);
+        Assert.True(validationResult.IsSuccess);
     }
 
     [Fact]
     public void Validate_ResponseWithIdToken_ReturnsSuccess()
     {
-        var json = @"{ ""vp_token"": ""vp..."", ""state"": ""state-x"", ""id_token"": ""id_token..."" }";
-        var response = _parser.Parse(json);
+        var json = @"{ ""vp_token"": { ""credential1"": [""vp...""] }, ""state"": ""state-x"", ""id_token"": ""id_token..."" }";
+        var result = _parser.Parse(json);
+        var response = result.Value!;
         
-        var result = _validator.Validate(response);
+        var validationResult = _validator.Validate(response);
         
-        Assert.True(result.IsSuccess);
+        Assert.True(validationResult.IsSuccess);
     }
 
     [Fact]
@@ -61,62 +63,61 @@ public class AuthorizationResponseValidatorTests
     [Fact]
     public void Validate_NullVpToken_ReturnsFailure()
     {
-        // Can't test directly since records are immutable and sealed
-        // This is a theoretical edge case - parser would catch this
-        var json = @"{ ""vp_token"": ""vp..."" }";
-        var response = _parser.Parse(json);
+        var json = @"{ ""vp_token"": { ""credential1"": [""vp...""] } }";
+        var result = _parser.Parse(json);
+        var response = result.Value!;
         
-        // The parser creates a valid VpToken, so we verify validation passes
-        var result = _validator.Validate(response);
-        Assert.True(result.IsSuccess);
+        var validationResult = _validator.Validate(response);
+        Assert.True(validationResult.IsSuccess);
     }
 
     [Fact]
     public void Validate_NullPresentations_ReturnsFailure()
     {
-        // Can't test directly since records are immutable
-        // This would be caught during parsing
-        var json = @"{ ""vp_token"": ""vp..."" }";
-        var response = _parser.Parse(json);
-        var result = _validator.Validate(response);
+        var json = @"{ ""vp_token"": { ""credential1"": [""vp...""] } }";
+        var result = _parser.Parse(json);
+        var response = result.Value!;
+        var validationResult = _validator.Validate(response);
         
-        // Valid response creates valid presentations
-        Assert.True(result.IsSuccess);
+        Assert.True(validationResult.IsSuccess);
     }
 
     [Fact]
     public void ValidateStateMatch_MatchingState_ReturnsSuccess()
     {
-        var json = @"{ ""vp_token"": ""vp..."", ""state"": ""request-state-123"" }";
-        var response = _parser.Parse(json);
+        var json = @"{ ""vp_token"": { ""credential1"": [""vp...""] }, ""state"": ""request-state-123"" }";
+        var result = _parser.Parse(json);
+        var response = result.Value!;
         
-        var result = _validator.ValidateStateMatch(response, "request-state-123");
+        var validationResult = _validator.ValidateStateMatch(response, "request-state-123");
         
-        Assert.True(result.IsSuccess);
+        Assert.True(validationResult.IsSuccess);
     }
 
     [Fact]
     public void ValidateStateMatch_NonMatchingState_ReturnsFailure()
     {
-        var json = @"{ ""vp_token"": ""vp..."", ""state"": ""response-state-456"" }";
-        var response = _parser.Parse(json);
+        var json = @"{ ""vp_token"": { ""credential1"": [""vp...""] }, ""state"": ""response-state-456"" }";
+        var result = _parser.Parse(json);
+        var response = result.Value!;
         
-        var result = _validator.ValidateStateMatch(response, "request-state-123");
+        var validationResult = _validator.ValidateStateMatch(response, "request-state-123");
         
-        Assert.False(result.IsSuccess);
-        Assert.Contains(result.Errors, e => e.Message.Contains("State mismatch"));
+        Assert.False(validationResult.IsSuccess);
+        Assert.Contains(validationResult.Errors, e => e.Message.Contains("State mismatch"));
     }
 
     [Fact]
     public void ValidateStateMatch_ResponseMissingState_ReturnsFailure()
     {
-        var json = @"{ ""vp_token"": ""vp..."" }";
-        var response = _parser.Parse(json);
+        var json = @"{ ""vp_token"": { ""credential1"": [""vp...""] } }";
+        var result = _parser.Parse(json);
+        var response = result.Value!;
         
-        var result = _validator.ValidateStateMatch(response, "request-state-123");
+        var validationResult = _validator.ValidateStateMatch(response, "request-state-123");
         
-        Assert.False(result.IsSuccess);
-        Assert.Contains(result.Errors, e => e.Message.Contains("missing"));
+        Assert.False(validationResult.IsSuccess);
+        Assert.Contains(validationResult.Errors, e => e.Message.Contains("missing"));
     }
 
     [Fact]
@@ -138,46 +139,50 @@ public class AuthorizationResponseValidatorTests
     [Fact]
     public void ValidateStateMatch_StateIsEmptyString_ReturnsFailure()
     {
-        var json = @"{ ""vp_token"": ""vp..."", ""state"": """" }";
-        var response = _parser.Parse(json);
+        var json = @"{ ""vp_token"": { ""credential1"": [""vp...""] }, ""state"": """" }";
+        var result = _parser.Parse(json);
+        var response = result.Value!;
         
-        var result = _validator.ValidateStateMatch(response, "state-123");
+        var validationResult = _validator.ValidateStateMatch(response, "state-123");
         
-        Assert.False(result.IsSuccess);
+        Assert.False(validationResult.IsSuccess);
     }
 
     [Fact]
     public void ValidateStateMatch_CaseSensitive_ReturnsFailure()
     {
-        var json = @"{ ""vp_token"": ""vp..."", ""state"": ""State-123"" }";
-        var response = _parser.Parse(json);
+        var json = @"{ ""vp_token"": { ""credential1"": [""vp...""] }, ""state"": ""State-123"" }";
+        var result = _parser.Parse(json);
+        var response = result.Value!;
         
-        var result = _validator.ValidateStateMatch(response, "state-123");
+        var validationResult = _validator.ValidateStateMatch(response, "state-123");
         
-        Assert.False(result.IsSuccess);
-        Assert.Contains(result.Errors, e => e.Message.Contains("mismatch"));
+        Assert.False(validationResult.IsSuccess);
+        Assert.Contains(validationResult.Errors, e => e.Message.Contains("mismatch"));
     }
 
     [Fact]
-    public void Validate_ResponseWithArrayPresentations_ReturnsSuccess()
+    public void Validate_MultipleCredentials_ReturnsSuccess()
     {
-        var json = @"{ ""vp_token"": [""jwt1"", ""jwt2""] }";
-        var response = _parser.Parse(json);
+        var json = @"{ ""vp_token"": { ""credential1"": [""jwt1""], ""credential2"": [""jwt2""] } }";
+        var result = _parser.Parse(json);
+        var response = result.Value!;
         
-        var result = _validator.Validate(response);
+        var validationResult = _validator.Validate(response);
         
-        Assert.True(result.IsSuccess);
+        Assert.True(validationResult.IsSuccess);
     }
 
     [Fact]
     public void Validate_AllOptionalFieldsPopulated_ReturnsSuccess()
     {
-        var json = @"{ ""vp_token"": ""vp..."", ""state"": ""state-complete"", ""id_token"": ""id_token_jwt"" }";
-        var response = _parser.Parse(json);
+        var json = @"{ ""vp_token"": { ""credential1"": [""vp...""] }, ""state"": ""state-complete"", ""id_token"": ""id_token_jwt"" }";
+        var result = _parser.Parse(json);
+        var response = result.Value!;
         
-        var result = _validator.Validate(response);
+        var validationResult = _validator.Validate(response);
         
-        Assert.True(result.IsSuccess);
-        Assert.Empty(result.Errors);
+        Assert.True(validationResult.IsSuccess);
+        Assert.Empty(validationResult.Errors);
     }
 }

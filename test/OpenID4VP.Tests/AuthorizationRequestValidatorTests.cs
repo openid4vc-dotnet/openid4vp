@@ -324,9 +324,8 @@ public class AuthorizationRequestValidatorTests
         // This test verifies that encrypted response modes are valid without explicit enc values (using default A128GCM)
         using var rsa = RSA.Create(2048);
         var rsaKey = new RsaSecurityKey(rsa) { KeyId = "test-key-1" };
-        var jwkResult = JwksBuilder.CreatePublicKey(rsaKey, keyUsage: "enc");
-        var jwks = new JsonWebKeySet();
-        jwks.Keys.Add(jwkResult.Value);
+        var publicKeyResult = JwksBuilder.CreatePublicKey(rsaKey, keyUsage: "enc");
+        var publicKey = publicKeyResult.Value!;
 
         var buildResult = AuthorizationRequestBuilder.Create()
             .WithResponseType(ResponseTypes.VpToken)
@@ -337,7 +336,7 @@ public class AuthorizationRequestValidatorTests
             .WithDcql(dcql => dcql.AddW3cVcCredential("credential-1", b => ConfigureValidW3cCredential(b)))
             .WithClientMetadata(metadata => metadata
                 .WithName("Test Verifier")
-                .WithJwks(jwks))  // No explicit enc values
+                .WithPublicKeyForResponseEncryption(publicKey))  // Using default enc algorithm
             .Build();
         var request = buildResult.Value!;
 
@@ -346,7 +345,7 @@ public class AuthorizationRequestValidatorTests
         // Should be valid - default A128GCM is implicitly used (SHOULD be absent per spec)
         Assert.True(result.IsSuccess);
         Assert.Empty(result.Errors);
-        // Verify enc values are indeed absent/null
+        // Verify enc values are indeed absent/null (since default A128GCM is used)
         Assert.Null(request.ClientMetadata?.EncryptedResponseEncValuesSupported);
     }
 }
